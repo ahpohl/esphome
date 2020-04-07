@@ -27,6 +27,9 @@ class XiaomiListener : public esp32_ble_tracker::ESPBTDeviceListener {
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 };
 
+bool decrypt_xiaomi_payload(std::string const& t_cipher, std::string const& t_key,
+		std::string const& t_iv, std::string& t_plaintext);
+
 }  // namespace xiaomi_ble
 }  // namespace esphome
 

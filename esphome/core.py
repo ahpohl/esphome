@@ -55,7 +55,16 @@ class MACAddress:
         num = ''.join(f'{part:02X}' for part in self.parts)
         return RawExpression(f'0x{num}ULL')
 
-
+# TODO: class EncryptionKey
+class EncryptionKey:
+    def __init__(self, *parts):
+        if len(parts) != 16:
+            raise ValueError("Encryption key must consist of 16 items")
+        self.parts = parts
+        
+    def __str__(self):
+        return ''.join(f'{part:02X}' for part in self.parts)
+    
 def is_approximately_integer(value):
     if isinstance(value, int):
         return True
