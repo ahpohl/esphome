@@ -65,14 +65,14 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
 }
 bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data) {
   if (!service_data.uuid.contains(0x95, 0xFE)) {
-    // ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
+    ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
     return false;
   }
 
   const auto raw = service_data.data;
 
   if (raw.size() < 14) {
-    // ESP_LOGVV(TAG, "Xiaomi service data too short!");
+    ESP_LOGVV(TAG, "Xiaomi service data too short!");
     return false;
   }
 
@@ -80,9 +80,10 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
   bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
   bool is_cgg1 = ((raw[1] & 0x30) == 0x30 || (raw[1] & 0x20) == 0x20) && raw[2] == 0x47 && raw[3] == 0x03;
+  bool is_lywsd03mmc = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x05;
 
-  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1) {
-    // ESP_LOGVV(TAG, "Xiaomi no magic bytes");
+  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc) {
+    ESP_LOGVV(TAG, "Xiaomi no magic bytes");
     return false;
   }
 
@@ -93,6 +94,8 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     result.type = XiaomiParseResult::TYPE_LYWSD02;
   } else if (is_cgg1) {
     result.type = XiaomiParseResult::TYPE_CGG1;
+  } else if (is_lywsd03mmc) {
+    result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -156,6 +159,8 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
     name = "LYWSD02";
   } else if (res->type == XiaomiParseResult::TYPE_CGG1) {
     name = "CGG1";
+  } else if (res->type == XiaomiParseResult::LYWSD03MMC) {
+    name = "LYWSD03MMC";
   }
 
   ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, device.address_str().c_str());
