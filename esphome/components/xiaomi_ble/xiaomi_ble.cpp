@@ -159,7 +159,7 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
     name = "LYWSD02";
   } else if (res->type == XiaomiParseResult::TYPE_CGG1) {
     name = "CGG1";
-  } else if (res->type == XiaomiParseResult::LYWSD03MMC) {
+  } else if (res->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
     name = "LYWSD03MMC";
   }
 
