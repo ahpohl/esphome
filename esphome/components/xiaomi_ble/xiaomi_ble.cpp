@@ -217,8 +217,9 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
   }
   // TODO: get MAC from config, check MAC match (raw <-> config)
   // construct IV: MAC(6) + sensor_type(2) + packet_id(1) = 9 bytes
-  // std::string iv = "raw[bytes 5-10] + raw[bytes 2-3] + raw[byte 4]";
-  // get encryption_key from config
+  // iv = "raw[bytes 5-10] + raw[bytes 2-3] + raw[byte 4]";
+  // extract tag from raw data
+  // get encryption key from config
 
   // BLE ADV packet capture
   // Tag: 9F1F0F10 vs. 92982352
@@ -231,7 +232,7 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
       .authdata    = {0x11},
       .iv          = {0x78, 0x16, 0x4E, 0x38, 0xC1, 0xA4, 0x5B, 0x05,
 		      0x3D, 0x2E, 0x00, 0x00},
-      .tag         = {0x9F, 0x1F, 0x0F, 0x10},
+      .tag         = {0x92, 0x98, 0x23, 0x52},
       .authsize    = 1,
       .datasize    = 5,
       .tagsize     = 4,
@@ -239,6 +240,25 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
   };
 
   size_t const AES_KEY_SIZE = 128;
+  char* encoded;
+
+  ESP_LOGD(TAG, "Name      : %s", vector.name);
+  encoded = as_hex(vector.key, AES_KEY_SIZE/8);
+  ESP_LOGD(TAG, "Key       : %s", encoded);
+  free(encoded);
+  encoded = as_hex(vector.iv, vector.ivsize);
+  ESP_LOGD(TAG, "Iv        : %s", encoded);
+  free(encoded);
+  encoded = as_hex(vector.ciphertext, vector.datasize);
+  ESP_LOGD(TAG, "Cipher    : %s", encoded);
+  free(encoded);
+  encoded = as_hex(vector.plaintext, vector.datasize);
+  ESP_LOGD(TAG, "Plaintext : %s", encoded);
+  free(encoded);
+  encoded = as_hex(vector.tag, vector.tagsize);
+  ESP_LOGD(TAG, "Tag       : %s", encoded);
+  free(encoded);
+
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
 
@@ -282,9 +302,19 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
 
   mbedtls_ccm_free(&ctx);
 
-  // replace encrypted payload with plaintext
+  // TODO: replace encrypted payload with plaintext
 
   return true;
+}
+
+char* as_hex(unsigned char const* a, size_t a_size)
+{
+    char* s = (char*) malloc(a_size * 2 + 1);
+    memset(s, '\0', a_size * 2 + 1);
+    for (size_t i = 0; i < a_size; i++) {
+        sprintf(s + i * 2, "%02X", (char)a[i]);
+    }
+    return s;
 }
 
 }  // namespace xiaomi_ble

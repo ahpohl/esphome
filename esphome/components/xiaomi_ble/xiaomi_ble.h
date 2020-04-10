@@ -42,6 +42,7 @@ typedef struct AESVector {
 } AESVector_t;
 
 bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length);
+char* as_hex(unsigned char const* a, size_t a_size);
 
 }  // namespace xiaomi_ble
 }  // namespace esphome
