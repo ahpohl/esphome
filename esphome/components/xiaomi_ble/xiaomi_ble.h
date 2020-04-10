@@ -27,8 +27,21 @@ class XiaomiListener : public esp32_ble_tracker::ESPBTDeviceListener {
   bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override;
 };
 
-bool decrypt_xiaomi_payload(std::string const& t_cipher, std::string const& t_key,
-		std::string const& t_iv, std::string& t_plaintext);
+typedef struct AESVector {
+  char const* name;
+  unsigned char key[32];
+  unsigned char plaintext[16];
+  unsigned char ciphertext[16];
+  unsigned char authdata[16];
+  unsigned char iv[16];
+  unsigned char tag[16];
+  size_t authsize;
+  size_t datasize;
+  size_t tagsize;
+  size_t ivsize;
+} AESVector_t;
+
+bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length);
 
 }  // namespace xiaomi_ble
 }  // namespace esphome

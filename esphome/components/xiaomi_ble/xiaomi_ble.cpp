@@ -1,13 +1,8 @@
 #include "xiaomi_ble.h"
 #include "esphome/core/log.h"
 
-/*
-#include <cryptopp/cryptlib.h>
-#include <cryptopp/filters.h>
-#include <cryptopp/aes.h>
-#include <cryptopp/ccm.h>
-#include <cryptopp/hex.h>
-*/
+#include <string.h>
+#include <mbedtls/ccm.h>
 
 #ifdef ARDUINO_ARCH_ESP32
 
@@ -16,7 +11,8 @@ namespace xiaomi_ble {
 
 static const char *TAG = "xiaomi_ble";
 
-bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result) {
+bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result)
+{
   switch (data_type) {
     case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
       if (data_length != 4)
@@ -74,15 +70,14 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
 
 // TODO: decrypt ADV message on the fly (in separate decrypt_xiaomi_payload() function)
 // replace encrypted payload with plaintext
-// check data types (binary std::string vs. CryptoPP::Byte vs. esp32_ble_tracker::ServiceData)
-
-bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data) {
+bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data)
+{
   if (!service_data.uuid.contains(0x95, 0xFE)) {
     ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
     return false;
   }
 
-  const auto raw = service_data.data;
+  auto const raw = service_data.data;
 
   if (raw.size() < 14) {
     ESP_LOGVV(TAG, "Xiaomi service data too short!");
@@ -112,15 +107,10 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
   
   if (is_lywsd03mmc) {
-	  if (!(raw[0] & 0x08)) {
-		ESP_LOGVV(TAG, "Plaintext ADV payload");
-	    return false;
-	  }
-	  // TODO: get MAC from config, check MAC match (raw <-> config)
-	  // construct IV: MAC(6) + sensor_type(2) + packet_id(1) = 9 bytes
-	  // std::string iv = raw[5-10] + raw[2-3] + raw[4];
-	  // get encryption_key from config
-      // decrypt payload
+    int ret = decrypt_xiaomi_payload(raw.data(), raw.size());
+    if (ret == false) {
+      ESP_LOGD(TAG, "Decrypt Xiaomi payload failed.");
+    }
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -160,7 +150,9 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
 
   return success;
 }
-optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device) {
+
+optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device)
+{
   XiaomiParseResult result;
   bool success = false;
   for (auto &service_data : device.get_service_datas()) {
@@ -172,7 +164,8 @@ optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &d
   return result;
 }
 
-bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
+{
   auto res = parse_xiaomi(device);
   if (!res.has_value())
     return false;
@@ -212,72 +205,87 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
   return true;
 }
 
-/*
-bool decrypt_xiaomi_payload(std::string const& t_cipher, std::string const& t_key,
-		std::string const& t_iv, std::string& t_plaintext)
+bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
 {
-  int const TAG_SIZE = 4;
-  std::string const aad = "\x11";
-  std::string const enc = t_cipher.substr(0, t_cipher.length()-TAG_SIZE);
-  std::string const tag = t_cipher.substr(t_cipher.length()-TAG_SIZE);
-  std::string const payload_counter = enc.substr(enc.length()-3);
-  std::string const iv = t_iv + payload_counter;
-  std::string const cipher = enc.substr(0, enc.length()-3);
-
-  std::string encoded;
-  CryptoPP::StringSource ssk(t_key, true, new CryptoPP::HexEncoder(
-    new CryptoPP::StringSink(encoded), true, 2, "")
-  );
-  ESP_LOGD(TAG, "Key    : %s", encoded);
-  encoded.clear();
-  CryptoPP::StringSource ssi(iv, true, new CryptoPP::HexEncoder(
-    new CryptoPP::StringSink(encoded), true, 2, "")
-  );
-  ESP_LOGD(TAG, "Iv     : %s", encoded);
-  encoded.clear();
-  CryptoPP::StringSource ssc(cipher, true, new CryptoPP::HexEncoder(
-    new CryptoPP::StringSink(encoded), true, 2, "")
-  );
-  ESP_LOGD(TAG, "Cipher : %s", encoded);
-  encoded.clear();
-  CryptoPP::StringSource sst(tag, true, new CryptoPP::HexEncoder(
-    new CryptoPP::StringSink(encoded), true, 2, "")
-  );
-  ESP_LOGD(TAG, "Tag    : %s", encoded);
-
-  try {
-    CryptoPP::CCM< CryptoPP::AES, TAG_SIZE >::Decryption d;
-    d.SetKeyWithIV((const CryptoPP::byte*)t_key.data(), t_key.size(),
-      (const CryptoPP::byte*)iv.data(), iv.size());
-    d.SpecifyDataLengths(aad.size(), cipher.size(), 0);
-
-    CryptoPP::AuthenticatedDecryptionFilter df(d,
-      new CryptoPP::StringSink(t_plaintext));
-
-    df.ChannelPut(CryptoPP::AAD_CHANNEL,
-      (const CryptoPP::byte*)aad.data(), aad.size());
-    df.ChannelPut(CryptoPP::DEFAULT_CHANNEL,
-      (const CryptoPP::byte*)cipher.data(), cipher.size());
-    df.ChannelPut(CryptoPP::DEFAULT_CHANNEL,
-      (const CryptoPP::byte*)tag.data(), tag.size());
-
-    df.ChannelMessageEnd(CryptoPP::AAD_CHANNEL);
-    df.ChannelMessageEnd(CryptoPP::DEFAULT_CHANNEL);
+  if (t_length < 23) {
+    ESP_LOGD(TAG, "Payload too short (%d)!", t_length);
+    return false;
   }
-  catch (CryptoPP::InvalidArgument& e) {
-	ESP_LOGVV(TAG, "%s", e.what());
-	return false;
+  if (!(t_raw[0] & 0x08)) {
+    ESP_LOGD(TAG, "Plaintext ADV payload");
+    return false;
   }
-  catch (CryptoPP::HashVerificationFilter::HashVerificationFailed& e) {
-	ESP_LOGVV(TAG, "%s", e.what());
-	return false;
+  // TODO: get MAC from config, check MAC match (raw <-> config)
+  // construct IV: MAC(6) + sensor_type(2) + packet_id(1) = 9 bytes
+  // std::string iv = "raw[bytes 5-10] + raw[bytes 2-3] + raw[byte 4]";
+  // get encryption_key from config
+
+  // BLE ADV packet capture
+  // Tag: 9F1F0F10 vs. 92982352
+  AESVector_t constexpr vector = {
+      .name        = "AES-128 CCM BLE ADV",
+      .key         = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
+		      0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0x1C},
+      .plaintext   = {0x04, 0x10, 0x02, 0xD3, 0x00},
+      .ciphertext  = {0xDA, 0x61, 0x66, 0x77, 0xD5},
+      .authdata    = {0x11},
+      .iv          = {0x78, 0x16, 0x4E, 0x38, 0xC1, 0xA4, 0x5B, 0x05,
+		      0x3D, 0x2E, 0x00, 0x00},
+      .tag         = {0x9F, 0x1F, 0x0F, 0x10},
+      .authsize    = 1,
+      .datasize    = 5,
+      .tagsize     = 4,
+      .ivsize      = 12
+  };
+
+  size_t const AES_KEY_SIZE = 128;
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+
+  int ret = 0;
+  ret = mbedtls_ccm_setkey(&ctx,
+    MBEDTLS_CIPHER_ID_AES,
+    vector.key,
+    AES_KEY_SIZE
+  );
+  if (ret) {
+    ESP_LOGD(TAG, "AES-CCM setkey failed.");
+    return false;
   }
 
-  ESP_LOGVV(TAG, "Decrypted and verified data";
+  unsigned char plaintext[16] = {0};
+
+  ret = mbedtls_ccm_auth_decrypt(&ctx,
+    vector.datasize,
+    vector.iv,
+    vector.ivsize,
+    vector.authdata,
+    vector.datasize,
+    vector.ciphertext,
+    plaintext,
+    vector.tag,
+    vector.tagsize
+  );
+
+  if (ret) {
+    if (ret == MBEDTLS_ERR_CCM_AUTH_FAILED) {
+      ESP_LOGD(TAG, "Authenticated decryption failed.");
+    } else if (ret == MBEDTLS_ERR_CCM_BAD_INPUT) {
+      ESP_LOGD(TAG, "Bad input parameters to the function.");
+    } else if (ret == MBEDTLS_ERR_CCM_HW_ACCEL_FAILED) {
+      ESP_LOGD(TAG, "CCM hardware accelerator failed.");
+    }
+    return false;
+  } else {
+    ESP_LOGD(TAG, "Authenticated decryption successful.");
+  }
+
+  mbedtls_ccm_free(&ctx);
+
+  // replace encrypted payload with plaintext
 
   return true;
 }
-*/
 
 }  // namespace xiaomi_ble
 }  // namespace esphome

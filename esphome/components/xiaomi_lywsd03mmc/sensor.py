@@ -26,8 +26,7 @@ CONFIG_SCHEMA = cv.Schema({
 def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     yield cg.register_component(var, config)
-    # TODO: integrate Crypto++ library as the decryptor depends on it
-    #yield cg.set_library("Crypto++", "8.2.0")
+    # TODO: integrate platoformio Crypto library
     yield esp32_ble_tracker.register_ble_device(var, config)
 
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
