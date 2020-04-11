@@ -29,20 +29,20 @@ class XiaomiListener : public esp32_ble_tracker::ESPBTDeviceListener {
 
 typedef struct AESVector {
   char const* name;
-  unsigned char key[32];
-  unsigned char plaintext[16];
-  unsigned char ciphertext[16];
-  unsigned char authdata[16];
-  unsigned char iv[16];
-  unsigned char tag[16];
+  uint8_t key[32];
+  uint8_t plaintext[16];
+  uint8_t ciphertext[16];
+  uint8_t authdata[16];
+  uint8_t iv[16];
+  uint8_t tag[16];
   size_t authsize;
   size_t datasize;
   size_t tagsize;
   size_t ivsize;
 } AESVector_t;
 
-bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length);
-char* as_hex(unsigned char const* a, size_t a_size);
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw);
+char* as_hex(uint8_t const* a, size_t a_size);
 
 }  // namespace xiaomi_ble
 }  // namespace esphome

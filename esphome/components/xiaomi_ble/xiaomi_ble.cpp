@@ -1,6 +1,8 @@
 #include "xiaomi_ble.h"
 #include "esphome/core/log.h"
 
+#include <vector>
+#include <algorithm>
 #include <string.h>
 #include <mbedtls/ccm.h>
 
@@ -77,7 +79,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     return false;
   }
 
-  auto const raw = service_data.data;
+  std::vector<uint8_t>(raw) = service_data.data;
 
   if (raw.size() < 14) {
     ESP_LOGVV(TAG, "Xiaomi service data too short!");
@@ -107,7 +109,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
   
   if (is_lywsd03mmc) {
-    int ret = decrypt_xiaomi_payload(raw.data(), raw.size());
+    int ret = decrypt_xiaomi_payload(raw);
     if (ret == false) {
       ESP_LOGD(TAG, "Decrypt Xiaomi payload failed.");
     }
@@ -121,10 +123,15 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   // Byte 2: length
   // Byte 3..3+len-1: data point value
 
-  const uint8_t *raw_data = &raw[raw_offset];
+  uint8_t *raw_data = &raw[raw_offset];
   uint8_t data_offset = 0;
   uint8_t data_length = raw.size() - raw_offset;
   bool success = false;
+
+  char* encoded;
+  encoded = as_hex(raw_data, data_length);
+  ESP_LOGD(TAG, "Payload   : %s\n", encoded);
+  free(encoded);
 
   while (true) {
     if (data_length < 4)
@@ -205,10 +212,10 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw)
 {
-  if (t_length < 23) {
-    ESP_LOGD(TAG, "Payload too short (%d)!", t_length);
+  if (t_raw.size() < 23) {
+    ESP_LOGD(TAG, "Payload too short (%d)!", t_raw.size());
     return false;
   }
   if (!(t_raw[0] & 0x08)) {
@@ -216,14 +223,13 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
     return false;
   }
   // TODO: get MAC from config, check MAC match (raw <-> config)
-  // construct IV: MAC(6) + sensor_type(2) + packet_id(1) = 9 bytes
-  // iv = "raw[bytes 5-10] + raw[bytes 2-3] + raw[byte 4]";
+  // construct IV: MAC(6) + sensor_type(2) + packet_id(1) + counter(3) = 12 bytes
   // extract tag from raw data
   // get encryption key from config
 
   // BLE ADV packet capture
   // Tag: 9F1F0F10 vs. 92982352
-  AESVector_t constexpr vector = {
+  AESVector_t vector = {
       .name        = "AES-128 CCM BLE ADV",
       .key         = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
 		      0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0x1C},
@@ -232,17 +238,36 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
       .authdata    = {0x11},
       .iv          = {0x78, 0x16, 0x4E, 0x38, 0xC1, 0xA4, 0x5B, 0x05,
 		      0x3D, 0x2E, 0x00, 0x00},
-      .tag         = {0x92, 0x98, 0x23, 0x52},
+      .tag         = {0x9F, 0x1F, 0x0F, 0x10},
       .authsize    = 1,
       .datasize    = 5,
       .tagsize     = 4,
       .ivsize      = 12
   };
 
+  memset(vector.iv, 0, vector.ivsize);
+  uint8_t* v = t_raw.data();
+
+  memcpy(vector.iv,   v+10, 1); // MAC address, b1
+  memcpy(vector.iv+1, v+9,  1); // MAC address, b2
+  memcpy(vector.iv+2, v+8,  1); // MAC address, b3
+  memcpy(vector.iv+3, v+7,  1); // MAC address, b4
+  memcpy(vector.iv+4, v+6,  1); // MAC address, b5
+  memcpy(vector.iv+5, v+5,  1); // MAC address, b6
+  memcpy(vector.iv+6, v+2,  2); // sensor type
+  memcpy(vector.iv+8, v+4,  1); // packet id
+  memcpy(vector.iv+9, v+16, 3); // payload counter
+
+  memset(vector.tag, 0, vector.tagsize);
+  memcpy(vector.tag, v+19, 4);
+
   size_t const AES_KEY_SIZE = 128;
   char* encoded;
 
   ESP_LOGD(TAG, "Name      : %s", vector.name);
+  encoded = as_hex(t_raw.data(), t_raw.size());
+  ESP_LOGD(TAG, "Packet    : %s", encoded);
+  free(encoded);
   encoded = as_hex(vector.key, AES_KEY_SIZE/8);
   ESP_LOGD(TAG, "Key       : %s", encoded);
   free(encoded);
@@ -273,7 +298,7 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
     return false;
   }
 
-  unsigned char plaintext[16] = {0};
+  uint8_t plaintext[16] = {0};
 
   ret = mbedtls_ccm_auth_decrypt(&ctx,
     vector.datasize,
@@ -302,12 +327,16 @@ bool decrypt_xiaomi_payload(unsigned char const* t_raw, size_t t_length)
 
   mbedtls_ccm_free(&ctx);
 
+  uint8_t* p = plaintext;
   // TODO: replace encrypted payload with plaintext
+  for (std::vector<uint8_t>::iterator it = t_raw.begin()+12; it != t_raw.begin()+12+vector.datasize; ++it) {
+      *it = *(p++);
+  }
 
   return true;
 }
 
-char* as_hex(unsigned char const* a, size_t a_size)
+char* as_hex(uint8_t const* a, size_t a_size)
 {
     char* s = (char*) malloc(a_size * 2 + 1);
     memset(s, '\0', a_size * 2 + 1);
