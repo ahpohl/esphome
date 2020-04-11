@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <string.h>
 #include <mbedtls/ccm.h>
+#include <mbedtls/error.h>
 
 #ifdef ARDUINO_ARCH_ESP32
 
@@ -108,7 +109,8 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
   
   if (is_lywsd03mmc) {
-    std::string bindkey;
+    uint8_t bindkey[16] = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
+                           0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0xFF};
     int ret = decrypt_xiaomi_payload(raw, bindkey);
     if (ret == false) {
       ESP_LOGD(TAG, "Decrypt Xiaomi payload failed.");
@@ -130,7 +132,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
 
   char* encoded;
   encoded = as_hex(raw_data, data_length);
-  ESP_LOGD(TAG, "Payload   : %s\n", encoded);
+  ESP_LOGD(TAG, "Payload   : %s", encoded);
   free(encoded);
 
   while (true) {
@@ -213,7 +215,7 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 }
 
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bindkey)
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
 {
   if (t_raw.size() < 23) {
     ESP_LOGD(TAG, "Payload too short (%d)!", t_raw.size());
@@ -240,11 +242,13 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bi
       .iv          = {0x78, 0x16, 0x4E, 0x38, 0xC1, 0xA4, 0x5B, 0x05,
 		      0x3D, 0x2E, 0x00, 0x00},
       .tag         = {0x9F, 0x1F, 0x0F, 0x10},
+      .keysize     = 16,
       .authsize    = 1,
       .datasize    = 5,
       .tagsize     = 4,
       .ivsize      = 12
   };
+  memcpy(vector.key, t_bindkey, vector.keysize);
 
   memset(vector.iv, 0, vector.ivsize);
   uint8_t* v = t_raw.data();
@@ -262,14 +266,13 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bi
   memset(vector.tag, 0, vector.tagsize);
   memcpy(vector.tag, v+19, 4);
 
-  size_t const AES_KEY_SIZE = 128;
   char* encoded;
 
   ESP_LOGD(TAG, "Name      : %s", vector.name);
   encoded = as_hex(t_raw.data(), t_raw.size());
   ESP_LOGD(TAG, "Packet    : %s", encoded);
   free(encoded);
-  encoded = as_hex(vector.key, AES_KEY_SIZE/8);
+  encoded = as_hex(vector.key, vector.keysize);
   ESP_LOGD(TAG, "Key       : %s", encoded);
   free(encoded);
   encoded = as_hex(vector.iv, vector.ivsize);
@@ -292,10 +295,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bi
   ret = mbedtls_ccm_setkey(&ctx,
     MBEDTLS_CIPHER_ID_AES,
     vector.key,
-    AES_KEY_SIZE
+    vector.keysize*8
   );
   if (ret) {
-    ESP_LOGD(TAG, "AES-CCM setkey failed.");
+    char err[100] = {0};
+    mbedtls_strerror(ret, err, 99);
+    ESP_LOGD(TAG, "MbedTLS    : %s\n", err);
     return false;
   }
 
@@ -314,14 +319,11 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bi
   );
 
   if (ret) {
-    if (ret == MBEDTLS_ERR_CCM_AUTH_FAILED) {
-      ESP_LOGD(TAG, "Authenticated decryption failed.");
-    } else if (ret == MBEDTLS_ERR_CCM_BAD_INPUT) {
-      ESP_LOGD(TAG, "Bad input parameters to the function.");
-    } else if (ret == MBEDTLS_ERR_CCM_HW_ACCEL_FAILED) {
-      ESP_LOGD(TAG, "CCM hardware accelerator failed.");
-    }
-    return false;
+    char err[100] = {0};
+    if (ret) {
+      mbedtls_strerror(ret, err, 99);
+      ESP_LOGD(TAG, "MbedTLS    : %s\n", err);
+      return false;
   } else {
     ESP_LOGD(TAG, "Authenticated decryption successful.");
   }
