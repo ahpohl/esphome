@@ -109,12 +109,11 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
   
   if (is_lywsd03mmc) {
+    // TODO: access bindkey_ from lywsd03mmc config for the correct device
+    // instead of using the dummy key given here
     uint8_t bindkey[16] = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
-                           0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0xFF};
+                           0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0x1C};
     int ret = decrypt_xiaomi_payload(raw, bindkey);
-    if (ret == false) {
-      ESP_LOGD(TAG, "Decrypt Xiaomi payload failed.");
-    }
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -129,11 +128,6 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   uint8_t data_offset = 0;
   uint8_t data_length = raw.size() - raw_offset;
   bool success = false;
-
-  char* encoded;
-  encoded = as_hex(raw_data, data_length);
-  ESP_LOGD(TAG, "Payload   : %s", encoded);
-  free(encoded);
 
   while (true) {
     if (data_length < 4)
@@ -218,17 +212,13 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
 {
   if (t_raw.size() < 23) {
-    ESP_LOGD(TAG, "Payload too short (%d)!", t_raw.size());
+    ESP_LOGD(TAG, "CCM - Payload too short (%d)!", t_raw.size());
     return false;
   }
   if (!(t_raw[0] & 0x08)) {
-    ESP_LOGD(TAG, "Plaintext ADV payload");
+    ESP_LOGD(TAG, "CCM - Plaintext ADV payload discovered.");
     return false;
   }
-  // TODO: get MAC from config, check MAC match (raw <-> config)
-  // construct IV: MAC(6) + sensor_type(2) + packet_id(1) + counter(3) = 12 bytes
-  // extract tag from raw data
-  // get encryption key from config
 
   // BLE ADV packet capture
   // Tag: 9F1F0F10 vs. 92982352
@@ -263,30 +253,11 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
   memcpy(vector.iv+8, v+4,  1); // packet id
   memcpy(vector.iv+9, v+16, 3); // payload counter
 
+  memset(vector.ciphertext, 0, vector.datasize);
+  memcpy(vector.ciphertext, v+11, vector.datasize);
+
   memset(vector.tag, 0, vector.tagsize);
-  memcpy(vector.tag, v+19, 4);
-
-  char* encoded;
-
-  ESP_LOGD(TAG, "Name      : %s", vector.name);
-  encoded = as_hex(t_raw.data(), t_raw.size());
-  ESP_LOGD(TAG, "Packet    : %s", encoded);
-  free(encoded);
-  encoded = as_hex(vector.key, vector.keysize);
-  ESP_LOGD(TAG, "Key       : %s", encoded);
-  free(encoded);
-  encoded = as_hex(vector.iv, vector.ivsize);
-  ESP_LOGD(TAG, "Iv        : %s", encoded);
-  free(encoded);
-  encoded = as_hex(vector.ciphertext, vector.datasize);
-  ESP_LOGD(TAG, "Cipher    : %s", encoded);
-  free(encoded);
-  encoded = as_hex(vector.plaintext, vector.datasize);
-  ESP_LOGD(TAG, "Plaintext : %s", encoded);
-  free(encoded);
-  encoded = as_hex(vector.tag, vector.tagsize);
-  ESP_LOGD(TAG, "Tag       : %s", encoded);
-  free(encoded);
+  memcpy(vector.tag, v+19, vector.tagsize);
 
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
@@ -300,11 +271,11 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
   if (ret) {
     char err[100] = {0};
     mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "MbedTLS    : %s\n", err);
+    ESP_LOGD(TAG, "%s.", err);
     return false;
   }
 
-  uint8_t plaintext[16] = {0};
+  memset(vector.plaintext, 0, vector.datasize);
 
   ret = mbedtls_ccm_auth_decrypt(&ctx,
     vector.datasize,
@@ -313,25 +284,46 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     vector.authdata,
     vector.datasize,
     vector.ciphertext,
-    plaintext,
+    vector.plaintext,
     vector.tag,
     vector.tagsize
   );
 
   if (ret) {
     char err[100] = {0};
-    if (ret) {
-      mbedtls_strerror(ret, err, 99);
-      ESP_LOGD(TAG, "MbedTLS    : %s\n", err);
-      return false;
+    mbedtls_strerror(ret, err, 99);
+    ESP_LOGD(TAG, "%s.", err);
+
+    char* encoded;
+    ESP_LOGD(TAG, "Name      : %s", vector.name);
+    encoded = as_hex(t_raw.data(), t_raw.size());
+    ESP_LOGD(TAG, "Packet    : %s", encoded);
+    free(encoded);
+    encoded = as_hex(vector.key, vector.keysize);
+    ESP_LOGD(TAG, "Key       : %s", encoded);
+    free(encoded);
+    encoded = as_hex(vector.iv, vector.ivsize);
+    ESP_LOGD(TAG, "Iv        : %s", encoded);
+    free(encoded);
+    encoded = as_hex(vector.ciphertext, vector.datasize);
+    ESP_LOGD(TAG, "Cipher    : %s", encoded);
+    free(encoded);
+    encoded = as_hex(vector.plaintext, vector.datasize);
+    ESP_LOGD(TAG, "Plaintext : %s", encoded);
+    free(encoded);
+    encoded = as_hex(vector.tag, vector.tagsize);
+    ESP_LOGD(TAG, "Tag       : %s", encoded);
+    free(encoded);
+
+    return false;
   } else {
-    ESP_LOGD(TAG, "Authenticated decryption successful.");
+    ESP_LOGD(TAG, "CCM - Authenticated decryption passed.");
   }
 
   mbedtls_ccm_free(&ctx);
 
   // replace encrypted payload with plaintext
-  uint8_t* p = plaintext;
+  uint8_t* p = vector.plaintext;
   for (std::vector<uint8_t>::iterator it = t_raw.begin()+12; it != t_raw.begin()+12+vector.datasize; ++it) {
       *it = *(p++);
   }
