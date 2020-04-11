@@ -70,8 +70,7 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
   }
 }
 
-// TODO: decrypt ADV message on the fly (in separate decrypt_xiaomi_payload() function)
-// replace encrypted payload with plaintext
+
 bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data)
 {
   if (!service_data.uuid.contains(0x95, 0xFE)) {
@@ -109,7 +108,8 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
   
   if (is_lywsd03mmc) {
-    int ret = decrypt_xiaomi_payload(raw);
+    std::string bindkey;
+    int ret = decrypt_xiaomi_payload(raw, bindkey);
     if (ret == false) {
       ESP_LOGD(TAG, "Decrypt Xiaomi payload failed.");
     }
@@ -212,7 +212,8 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw)
+
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bindkey)
 {
   if (t_raw.size() < 23) {
     ESP_LOGD(TAG, "Payload too short (%d)!", t_raw.size());
@@ -327,14 +328,15 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw)
 
   mbedtls_ccm_free(&ctx);
 
+  // replace encrypted payload with plaintext
   uint8_t* p = plaintext;
-  // TODO: replace encrypted payload with plaintext
   for (std::vector<uint8_t>::iterator it = t_raw.begin()+12; it != t_raw.begin()+12+vector.datasize; ++it) {
       *it = *(p++);
   }
 
   return true;
 }
+
 
 char* as_hex(uint8_t const* a, size_t a_size)
 {

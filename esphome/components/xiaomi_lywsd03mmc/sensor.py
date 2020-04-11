@@ -13,7 +13,7 @@ XiaomiLYWSD03MMC = xiaomi_lywsd03mmc_ns.class_('XiaomiLYWSD03MMC', esp32_ble_tra
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(XiaomiLYWSD03MMC),
-    #cv.Required(CONF_BINDKEY): cv.alphanumeric,
+    cv.Required(CONF_BINDKEY): cv.bind_key,
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
     cv.Optional(CONF_TEMPERATURE): sensor.sensor_schema(UNIT_CELSIUS, ICON_THERMOMETER, 1),
     cv.Optional(CONF_HUMIDITY): sensor.sensor_schema(UNIT_PERCENT, ICON_WATER_PERCENT, 1),
@@ -27,7 +27,7 @@ def to_code(config):
     yield esp32_ble_tracker.register_ble_device(var, config)
 
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
-    #cg.add(var.set_bindkey(config[CONF_BINDKEY]))
+    cg.add(var.set_bindkey(config[CONF_BINDKEY].as_raw))
     
     if CONF_TEMPERATURE in config:
         sens = yield sensor.new_sensor(config[CONF_TEMPERATURE])

@@ -6,6 +6,7 @@ import logging
 import math
 import os
 import re
+import binascii
 
 # pylint: disable=unused-import, wrong-import-order
 from typing import Any, Dict, List, Optional, Set  # noqa
@@ -55,15 +56,20 @@ class MACAddress:
         num = ''.join(f'{part:02X}' for part in self.parts)
         return RawExpression(f'0x{num}ULL')
 
-# TODO: class EncryptionKey
-class EncryptionKey:
+
+class BindKey:
     def __init__(self, *parts):
-        if len(parts) != 16:
-            raise ValueError("Encryption key must consist of 16 items")
         self.parts = parts
         
     def __str__(self):
         return ''.join(f'{part:02X}' for part in self.parts)
+    
+    @property
+    def as_raw(self):
+        from esphome.cpp_generator import StringLiteral
+        
+        return StringLiteral(binascii.a2b_hex(self.__str__()))
+    
     
 def is_approximately_integer(value):
     if isinstance(value, int):

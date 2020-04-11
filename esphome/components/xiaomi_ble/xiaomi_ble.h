@@ -41,7 +41,7 @@ typedef struct AESVector {
   size_t ivsize;
 } AESVector_t;
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw);
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, std::string const& t_bindkey);
 char* as_hex(uint8_t const* a, size_t a_size);
 
 }  // namespace xiaomi_ble

@@ -14,9 +14,10 @@ from esphome import core
 from esphome.const import CONF_AVAILABILITY, CONF_COMMAND_TOPIC, CONF_DISCOVERY, CONF_ID, \
     CONF_INTERNAL, CONF_NAME, CONF_PAYLOAD_AVAILABLE, CONF_PAYLOAD_NOT_AVAILABLE, \
     CONF_RETAIN, CONF_SETUP_PRIORITY, CONF_STATE_TOPIC, CONF_TOPIC, \
-    CONF_HOUR, CONF_MINUTE, CONF_SECOND, CONF_VALUE, CONF_UPDATE_INTERVAL, CONF_TYPE_ID, CONF_TYPE
+    CONF_HOUR, CONF_MINUTE, CONF_SECOND, CONF_VALUE, CONF_UPDATE_INTERVAL, CONF_TYPE_ID, CONF_TYPE, \
+    CONF_BINDKEY
 from esphome.core import CORE, HexInt, IPAddress, Lambda, TimePeriod, TimePeriodMicroseconds, \
-    TimePeriodMilliseconds, TimePeriodSeconds, TimePeriodMinutes
+    TimePeriodMilliseconds, TimePeriodSeconds, TimePeriodMinutes, BindKey
 from esphome.helpers import list_starts_with, add_class_to_obj
 from esphome.voluptuous_schema import _Schema
 
@@ -566,22 +567,21 @@ def mac_address(value):
     return core.MACAddress(*parts_int)
 
 
-# TODO: validate encryption key, length = 32, 16 hex characters, no separator
-def encryption_key(value):
+def bind_key(value):
     value = string_strict(value)
     parts = [value[i:i+2] for i in range(0, len(value), 2)]
     if len(parts) != 16:
-        raise Invalid("Encryption key must consist of 16 hexadecimal numbers")
+        raise Invalid("Bind key must consist of 16 hexadecimal numbers")
     parts_int = []
     if any(len(part) != 2 for part in parts):
-        raise Invalid("Encryption key must be format XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        raise Invalid("Bind key must be format XX")
     for part in parts:
         try:
             parts_int.append(int(part, 16))
         except ValueError:
-            raise Invalid("Encryption key must be hexadecimal values from 00 to FF")
+            raise Invalid("Bind key must be hex values from 00 to FF")
     
-    return core.EncryptionKey(*parts_int)
+    return core.BindKey(*parts_int)
 
 
 def uuid(value):
