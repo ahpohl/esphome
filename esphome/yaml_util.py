@@ -11,7 +11,8 @@ import yaml.constructor
 
 from esphome import core
 from esphome.config_helpers import read_config_file
-from esphome.core import EsphomeError, IPAddress, Lambda, MACAddress, TimePeriod, DocumentRange, BindKey
+from esphome.core import EsphomeError, IPAddress, Lambda, MACAddress, TimePeriod, DocumentRange, \
+    BindKey
 from esphome.helpers import add_class_to_obj
 from esphome.util import OrderedDict, filter_yaml_files
 

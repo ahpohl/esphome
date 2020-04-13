@@ -81,7 +81,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     return false;
   }
 
-  std::vector<uint8_t>(raw) = service_data.data;
+  auto raw = service_data.data;
 
   if (raw.size() < 14) {
     ESP_LOGVV(TAG, "Xiaomi service data too short!");
@@ -171,6 +171,8 @@ optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &d
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 {
+  //ESP_LOGD(TAG, "XiaomiListener::parse_device() called.");
+
   auto res = parse_xiaomi(device);
   if (!res.has_value())
     return false;
@@ -209,7 +211,6 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 
   return true;
 }
-
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
 {

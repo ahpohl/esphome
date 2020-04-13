@@ -60,17 +60,17 @@ class MACAddress:
 class BindKey:
     def __init__(self, *parts):
         self.parts = parts
-        
+
     def __str__(self):
         return ''.join(f'{part:02X}' for part in self.parts)
-    
+
     @property
     def as_raw(self):
         from esphome.cpp_generator import StringLiteral
-        
+
         return StringLiteral(binascii.a2b_hex(self.__str__()))
-    
-    
+
+
 def is_approximately_integer(value):
     if isinstance(value, int):
         return True

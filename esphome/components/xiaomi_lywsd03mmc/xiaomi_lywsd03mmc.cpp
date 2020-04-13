@@ -24,6 +24,8 @@ void XiaomiLYWSD03MMC::dump_config()
 
 bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 {
+  //ESP_LOGD(TAG, "XiaomiLYWSD03MMC::parse_device() called.");
+
   if (device.address_uint64() != this->address_)
     return false;
 
