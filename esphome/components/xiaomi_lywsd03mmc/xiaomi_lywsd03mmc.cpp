@@ -8,9 +8,15 @@ namespace xiaomi_lywsd03mmc {
 
 static const char *TAG = "xiaomi_lywsd03mmc";
 
+XiaomiLYWSD03MMC::XiaomiLYWSD03MMC(void)
+{
+  ESP_LOGD(TAG, "XiaomiLYWSD03MMC constructor called.");
+}
+
 void XiaomiLYWSD03MMC::dump_config()
 {
   ESP_LOGCONFIG(TAG, "Xiaomi LYWSD03MMC");
+  ESP_LOGCONFIG(TAG, "  Bindkey: %s", xiaomi_ble::hexstring(this->bindkey_, 16).c_str());
   LOG_SENSOR("  ", "Temperature", this->temperature_);
   LOG_SENSOR("  ", "Humidity", this->humidity_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);

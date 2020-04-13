@@ -3,6 +3,8 @@
 
 #include <vector>
 #include <algorithm>
+#include <sstream>
+#include <iomanip>
 #include <string.h>
 #include <mbedtls/ccm.h>
 #include <mbedtls/error.h>
@@ -267,26 +269,6 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     vector.keysize*8
   );
   if (ret) {
-    char* encoded;
-    ESP_LOGD(TAG, "Name      : %s", vector.name);
-    encoded = as_hex(mac_address, 6);
-    ESP_LOGD(TAG, "MAC       : %s", encoded);
-    free(encoded);
-    encoded = as_hex(t_raw.data(), t_raw.size());
-    ESP_LOGD(TAG, "Packet    : %s", encoded);
-    free(encoded);
-    encoded = as_hex(vector.key, vector.keysize);
-    ESP_LOGD(TAG, "Key       : %s", encoded);
-    free(encoded);
-    encoded = as_hex(vector.iv, vector.ivsize);
-    ESP_LOGD(TAG, "Iv        : %s", encoded);
-    free(encoded);
-    encoded = as_hex(vector.ciphertext, vector.datasize);
-    ESP_LOGD(TAG, "Cipher    : %s", encoded);
-    free(encoded);
-    encoded = as_hex(vector.tag, vector.tagsize);
-    ESP_LOGD(TAG, "Tag       : %s", encoded);
-    free(encoded);
     char err[100] = {0};
     mbedtls_strerror(ret, err, 99);
     ESP_LOGD(TAG, "%s.", err);
@@ -307,6 +289,13 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
   );
 
   if (ret) {
+    ESP_LOGD(TAG, "Name      : %s", vector.name);
+    ESP_LOGD(TAG, "MAC       : %s", hexstring(mac_address, 6).c_str());
+    ESP_LOGD(TAG, "Packet    : %s", hexstring(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGD(TAG, "Key       : %s", hexstring(vector.key, vector.keysize).c_str());
+    ESP_LOGD(TAG, "Iv        : %s", hexstring(vector.iv, vector.ivsize).c_str());
+    ESP_LOGD(TAG, "Cipher    : %s", hexstring(vector.ciphertext, vector.datasize).c_str());
+    ESP_LOGD(TAG, "Tag       : %s", hexstring(vector.tag, vector.tagsize).c_str());
     char err[100] = {0};
     mbedtls_strerror(ret, err, 99);
     ESP_LOGD(TAG, "%s.", err);
@@ -322,23 +311,20 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     *it = *(p++);
   }
 
-  encoded = as_hex(t_raw.data()+12, vector.datasize);
-  ESP_LOGD(TAG, "Plaintext : %s", encoded);
-  free(encoded);
+  ESP_LOGD(TAG, "Plaintext : %s", hexstring(t_raw.data()+12, vector.datasize).c_str());
 
   mbedtls_ccm_free(&ctx);
   return true;
 }
 
-
-char* as_hex(uint8_t const* a, size_t a_size)
+std::string hexstring(uint8_t const* t_raw, size_t t_length)
 {
-  char* s = (char*) malloc(a_size * 2 + 1);
-  memset(s, '\0', a_size * 2 + 1);
-  for (size_t i = 0; i < a_size; i++) {
-    sprintf(s + i * 2, "%02X", (char)a[i]);
+  std::stringstream ss;
+  ss << std::hex << std::setfill('0') << std::uppercase;
+  for (size_t i = 0; t_length > i; ++i) {
+      ss << std::setw(2) << static_cast<unsigned int>(t_raw[i]);
   }
-  return s;
+  return ss.str();
 }
 
 }  // namespace xiaomi_ble
