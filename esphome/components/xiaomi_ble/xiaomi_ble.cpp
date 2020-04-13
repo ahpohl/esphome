@@ -115,7 +115,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     // instead of using the dummy key given here
     uint8_t bindkey[16] = {0xCF, 0xC7, 0xCC, 0x89, 0x2F, 0x4E, 0x32, 0xF7,
                            0xA7, 0x33, 0x08, 0x6c, 0xF3, 0x44, 0x3C, 0xB0};
-    int ret = decrypt_xiaomi_payload(raw, bindkey);
+    int ret = decrypt_xiaomi_payload(service_data, bindkey);
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -212,8 +212,10 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
+bool decrypt_xiaomi_payload(esp32_ble_tracker::ServiceData const& t_service_data, uint8_t const* t_bindkey)
 {
+  std::vector<uint8_t>(t_raw) = t_service_data.data;
+
   if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
     ESP_LOGD(TAG, "CCM - Payload has wrong size (%d)!", t_raw.size());
     return false;
@@ -244,7 +246,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
       offset = 1;
   }
 
-  uint8_t* v = t_raw.data();
+  uint8_t const* v = t_raw.data();
   memcpy(vector.key, t_bindkey, vector.keysize);
   memcpy(vector.ciphertext, v+11, vector.datasize);
   memcpy(vector.tag, v+18+offset, vector.tagsize);
