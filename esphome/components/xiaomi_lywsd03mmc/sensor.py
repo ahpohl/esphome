@@ -9,8 +9,8 @@ DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
 
 xiaomi_lywsd03mmc_ns = cg.esphome_ns.namespace('xiaomi_lywsd03mmc')
-XiaomiLYWSD03MMC = xiaomi_lywsd03mmc_ns.class_('XiaomiLYWSD03MMC', esp32_ble_tracker.ESPBTDeviceListener,
-                                               cg.Component)
+XiaomiLYWSD03MMC = xiaomi_lywsd03mmc_ns.class_('XiaomiLYWSD03MMC',
+    esp32_ble_tracker.ESPBTDeviceListener, cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(XiaomiLYWSD03MMC),
