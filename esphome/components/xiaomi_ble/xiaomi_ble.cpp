@@ -111,8 +111,8 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   if (is_lywsd03mmc) {
     // TODO: access bindkey_ from lywsd03mmc config for the correct device
     // instead of using the dummy key given here
-    uint8_t bindkey[16] = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
-                           0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0x1C};
+    uint8_t bindkey[16] = {0xCF, 0xC7, 0xCC, 0x89, 0x2F, 0x4E, 0x32, 0xF7,
+                           0xA7, 0x33, 0x08, 0x6c, 0xF3, 0x44, 0x3C, 0xB0};
     int ret = decrypt_xiaomi_payload(raw, bindkey);
   }
 
@@ -211,8 +211,8 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
 {
-  if (t_raw.size() < 23) {
-    ESP_LOGD(TAG, "CCM - Payload too short (%d)!", t_raw.size());
+  if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
+    ESP_LOGD(TAG, "CCM - Payload has wrong size (%d)!", t_raw.size());
     return false;
   }
   if (!(t_raw[0] & 0x08)) {
@@ -220,44 +220,42 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     return false;
   }
 
-  // BLE ADV packet capture
-  // Tag: 9F1F0F10 vs. 92982352
   AESVector_t vector = {
-      .name        = "AES-128 CCM BLE ADV",
-      .key         = {0xE9, 0xEF, 0xAA, 0x68, 0x73, 0xF9, 0xF9, 0xC8,
-		      0x7A, 0x5E, 0x75, 0xA5, 0xF8, 0x14, 0x80, 0x1C},
-      .plaintext   = {0x04, 0x10, 0x02, 0xD3, 0x00},
-      .ciphertext  = {0xDA, 0x61, 0x66, 0x77, 0xD5},
+      .name        = "LYWSD03MMC AES-128 CCM",
+      .key         = {0},
+      .plaintext   = {0},
+      .ciphertext  = {0},
       .authdata    = {0x11},
-      .iv          = {0x78, 0x16, 0x4E, 0x38, 0xC1, 0xA4, 0x5B, 0x05,
-		      0x3D, 0x2E, 0x00, 0x00},
-      .tag         = {0x9F, 0x1F, 0x0F, 0x10},
+      .iv          = {0},
+      .tag         = {0},
       .keysize     = 16,
       .authsize    = 1,
-      .datasize    = 5,
+      .datasize    = 4, // battery
       .tagsize     = 4,
       .ivsize      = 12
   };
-  memcpy(vector.key, t_bindkey, vector.keysize);
 
-  memset(vector.iv, 0, vector.ivsize);
+  int offset = 0;
+  if (t_raw.size() == 23) {
+      vector.datasize = 5; // temperature or humidity
+      offset = 1;
+  }
+
   uint8_t* v = t_raw.data();
-
-  memcpy(vector.iv,   v+10, 1); // MAC address, b1
-  memcpy(vector.iv+1, v+9,  1); // MAC address, b2
-  memcpy(vector.iv+2, v+8,  1); // MAC address, b3
-  memcpy(vector.iv+3, v+7,  1); // MAC address, b4
-  memcpy(vector.iv+4, v+6,  1); // MAC address, b5
-  memcpy(vector.iv+5, v+5,  1); // MAC address, b6
-  memcpy(vector.iv+6, v+2,  2); // sensor type
-  memcpy(vector.iv+8, v+4,  1); // packet id
-  memcpy(vector.iv+9, v+16, 3); // payload counter
-
-  memset(vector.ciphertext, 0, vector.datasize);
+  memcpy(vector.key, t_bindkey, vector.keysize);
   memcpy(vector.ciphertext, v+11, vector.datasize);
+  memcpy(vector.tag, v+18+offset, vector.tagsize);
+  memcpy(vector.iv, v+5, 6); // MAC address reversed
+  memcpy(vector.iv+6, v+2, 3); // sensor type (2) + packet id (1)
+  memcpy(vector.iv+9, v+15+offset, 3); // payload counter
 
-  memset(vector.tag, 0, vector.tagsize);
-  memcpy(vector.tag, v+19, vector.tagsize);
+  uint8_t mac_address[6] = {0};
+  memcpy(mac_address, v+10, 1);
+  memcpy(mac_address+1, v+9, 1);
+  memcpy(mac_address+2, v+8, 1);
+  memcpy(mac_address+3, v+7, 1);
+  memcpy(mac_address+4, v+6, 1);
+  memcpy(mac_address+5, v+5, 1);
 
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
@@ -269,33 +267,11 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     vector.keysize*8
   );
   if (ret) {
-    char err[100] = {0};
-    mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "%s.", err);
-    return false;
-  }
-
-  memset(vector.plaintext, 0, vector.datasize);
-
-  ret = mbedtls_ccm_auth_decrypt(&ctx,
-    vector.datasize,
-    vector.iv,
-    vector.ivsize,
-    vector.authdata,
-    vector.datasize,
-    vector.ciphertext,
-    vector.plaintext,
-    vector.tag,
-    vector.tagsize
-  );
-
-  if (ret) {
-    char err[100] = {0};
-    mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "%s.", err);
-
     char* encoded;
     ESP_LOGD(TAG, "Name      : %s", vector.name);
+    encoded = as_hex(mac_address, 6);
+    ESP_LOGD(TAG, "MAC       : %s", encoded);
+    free(encoded);
     encoded = as_hex(t_raw.data(), t_raw.size());
     ESP_LOGD(TAG, "Packet    : %s", encoded);
     free(encoded);
@@ -308,38 +284,61 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     encoded = as_hex(vector.ciphertext, vector.datasize);
     ESP_LOGD(TAG, "Cipher    : %s", encoded);
     free(encoded);
-    encoded = as_hex(vector.plaintext, vector.datasize);
-    ESP_LOGD(TAG, "Plaintext : %s", encoded);
-    free(encoded);
     encoded = as_hex(vector.tag, vector.tagsize);
     ESP_LOGD(TAG, "Tag       : %s", encoded);
     free(encoded);
+    char err[100] = {0};
+    mbedtls_strerror(ret, err, 99);
+    ESP_LOGD(TAG, "%s.", err);
+    mbedtls_ccm_free(&ctx);
+    return false;
+  }
 
+  ret = mbedtls_ccm_auth_decrypt(&ctx,
+    vector.datasize,
+    vector.iv,
+    vector.ivsize,
+    vector.authdata,
+    vector.authsize,
+    vector.ciphertext,
+    vector.plaintext,
+    vector.tag,
+    vector.tagsize
+  );
+
+  if (ret) {
+    char err[100] = {0};
+    mbedtls_strerror(ret, err, 99);
+    ESP_LOGD(TAG, "%s.", err);
+    mbedtls_ccm_free(&ctx);
     return false;
   } else {
     ESP_LOGD(TAG, "CCM - Authenticated decryption passed.");
   }
 
-  mbedtls_ccm_free(&ctx);
-
   // replace encrypted payload with plaintext
   uint8_t* p = vector.plaintext;
   for (std::vector<uint8_t>::iterator it = t_raw.begin()+12; it != t_raw.begin()+12+vector.datasize; ++it) {
-      *it = *(p++);
+    *it = *(p++);
   }
 
+  encoded = as_hex(t_raw.data()+12, vector.datasize);
+  ESP_LOGD(TAG, "Plaintext : %s", encoded);
+  free(encoded);
+
+  mbedtls_ccm_free(&ctx);
   return true;
 }
 
 
 char* as_hex(uint8_t const* a, size_t a_size)
 {
-    char* s = (char*) malloc(a_size * 2 + 1);
-    memset(s, '\0', a_size * 2 + 1);
-    for (size_t i = 0; i < a_size; i++) {
-        sprintf(s + i * 2, "%02X", (char)a[i]);
-    }
-    return s;
+  char* s = (char*) malloc(a_size * 2 + 1);
+  memset(s, '\0', a_size * 2 + 1);
+  for (size_t i = 0; i < a_size; i++) {
+    sprintf(s + i * 2, "%02X", (char)a[i]);
+  }
+  return s;
 }
 
 }  // namespace xiaomi_ble
