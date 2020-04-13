@@ -1,10 +1,9 @@
 #include "xiaomi_ble.h"
 #include "esphome/core/log.h"
+#include "esphome/core/helpers.h"
 
 #include <vector>
 #include <algorithm>
-//#include <sstream>
-//#include <iomanip>
 #include <string.h>
 #include <mbedtls/ccm.h>
 #include <mbedtls/error.h>
@@ -16,8 +15,7 @@ namespace xiaomi_ble {
 
 static const char *TAG = "xiaomi_ble";
 
-bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result)
-{
+bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result) {
   switch (data_type) {
     case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
       if (data_length != 4)
@@ -74,9 +72,7 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
 }
 
 
-bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data)
-{
-  //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi_service_data() called.");
+bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data) {
 
   if (!service_data.uuid.contains(0x95, 0xFE)) {
     ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
@@ -110,14 +106,6 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     result.type = XiaomiParseResult::TYPE_CGG1;
   } else if (is_lywsd03mmc) {
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
-  }
-  
-  if (is_lywsd03mmc) {
-    // TODO: access bindkey_ from lywsd03mmc config for the correct device
-    // instead of using the dummy key given here
-    uint8_t bindkey[16] = {0xCF, 0xC7, 0xCC, 0x89, 0x2F, 0x4E, 0x32, 0xF7,
-                           0xA7, 0x33, 0x08, 0x6c, 0xF3, 0x44, 0x3C, 0xB0};
-    int ret = decrypt_xiaomi_payload(raw, bindkey);
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -158,9 +146,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   return success;
 }
 
-optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device)
-{
-  //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() called.");
+optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device) {
 
   XiaomiParseResult result;
   bool success = false;
@@ -169,19 +155,17 @@ optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &d
       success = true;
   }
   if (!success) {
-    //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() parse service data failed.");
+    //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() failed.");
     return {};
   }
   return result;
 }
 
-bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
-{
-  //ESP_LOGD(TAG, "XiaomiListener::parse_device() called.");
+bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
 
   auto res = parse_xiaomi(device);
   if (!res.has_value()) {
-    //ESP_LOGD(TAG, "XiaomiListener::parse_device() no value.");
+    //ESP_LOGD(TAG, "XiaomiListener::parse_device() no result.");
     return false;
   }
 
@@ -220,10 +204,9 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
-{
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey) {
   if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
-    ESP_LOGD(TAG, "CCM - Payload has wrong size (%d)!", t_raw.size());
+    //ESP_LOGD(TAG, "CCM - Payload has wrong size (%d)!", t_raw.size());
     return false;
   }
   if (!(t_raw[0] & 0x08)) {
@@ -299,19 +282,18 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
 
   if (ret) {
     //ESP_LOGD(TAG, "Name      : %s", vector.name);
-    //ESP_LOGD(TAG, "MAC       : %s", hexstring(mac_address, 6).c_str());
-    //ESP_LOGD(TAG, "Packet    : %s", hexstring(t_raw.data(), t_raw.size()).c_str());
-    //ESP_LOGD(TAG, "Key       : %s", hexstring(vector.key, vector.keysize).c_str());
-    //ESP_LOGD(TAG, "Iv        : %s", hexstring(vector.iv, vector.ivsize).c_str());
-    //ESP_LOGD(TAG, "Cipher    : %s", hexstring(vector.ciphertext, vector.datasize).c_str());
-    //ESP_LOGD(TAG, "Tag       : %s", hexstring(vector.tag, vector.tagsize).c_str());
+    //ESP_LOGD(TAG, "Packet    : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    //ESP_LOGD(TAG, "Key       : %s", hexencode(vector.key, vector.keysize).c_str());
+    //ESP_LOGD(TAG, "Iv        : %s", hexencode(vector.iv, vector.ivsize).c_str());
+    //ESP_LOGD(TAG, "Cipher    : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
+    //ESP_LOGD(TAG, "Tag       : %s", hexencode(vector.tag, vector.tagsize).c_str());
     char err[100] = {0};
     mbedtls_strerror(ret, err, 99);
     ESP_LOGD(TAG, "%s.", err);
     mbedtls_ccm_free(&ctx);
     return false;
   } else {
-    ESP_LOGD(TAG, "CCM - Authenticated decryption passed.");
+    //ESP_LOGD(TAG, "CCM - Authenticated decryption passed.");
   }
 
   // replace encrypted payload with plaintext
@@ -320,23 +302,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindke
     *it = *(p++);
   }
 
-  //ESP_LOGD(TAG, "Plaintext : %s", hexstring(t_raw.data()+12, vector.datasize).c_str());
+  ESP_LOGD(TAG, "Plaintext : %s", hexencode(t_raw.data()+12, vector.datasize).c_str());
+  ESP_LOGD(TAG, "MAC address : %s", hexencode(mac_address, 6).c_str());
 
   mbedtls_ccm_free(&ctx);
   return true;
 }
-
-/*
-std::string hexstring(uint8_t const* t_raw, size_t t_length)
-{
-  std::stringstream ss;
-  ss << std::hex << std::setfill('0') << std::uppercase;
-  for (size_t i = 0; t_length > i; ++i) {
-      ss << std::setw(2) << static_cast<unsigned int>(t_raw[i]);
-  }
-  return ss.str();
-}
-*/
 
 }  // namespace xiaomi_ble
 }  // namespace esphome

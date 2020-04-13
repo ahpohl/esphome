@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
+#include "esphome/core/helpers.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
@@ -43,7 +44,6 @@ typedef struct AESVector {
 } AESVector_t;
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey);
-//std::string hexstring(uint8_t const* t_raw, size_t t_length);
 
 }  // namespace xiaomi_ble
 }  // namespace esphome
