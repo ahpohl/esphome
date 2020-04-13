@@ -42,8 +42,8 @@ typedef struct AESVector {
   size_t ivsize;
 } AESVector_t;
 
-bool decrypt_xiaomi_payload(esp32_ble_tracker::ServiceData const& t_service_data, uint8_t const* t_bindkey);
-std::string hexstring(uint8_t const* t_raw, size_t t_length);
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey);
+//std::string hexstring(uint8_t const* t_raw, size_t t_length);
 
 }  // namespace xiaomi_ble
 }  // namespace esphome

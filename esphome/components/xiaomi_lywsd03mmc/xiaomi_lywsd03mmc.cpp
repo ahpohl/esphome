@@ -16,7 +16,7 @@ XiaomiLYWSD03MMC::XiaomiLYWSD03MMC(void)
 void XiaomiLYWSD03MMC::dump_config()
 {
   ESP_LOGCONFIG(TAG, "Xiaomi LYWSD03MMC");
-  ESP_LOGCONFIG(TAG, "  Bindkey: %s", xiaomi_ble::hexstring(this->bindkey_, 16).c_str());
+  //ESP_LOGCONFIG(TAG, "  Bindkey: %s", xiaomi_ble::hexstring(this->bindkey_, 16).c_str());
   LOG_SENSOR("  ", "Temperature", this->temperature_);
   LOG_SENSOR("  ", "Humidity", this->humidity_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
@@ -26,12 +26,16 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
 {
   //ESP_LOGD(TAG, "XiaomiLYWSD03MMC::parse_device() called.");
 
-  if (device.address_uint64() != this->address_)
+  if (device.address_uint64() != this->address_) {
+    //ESP_LOGD(TAG, "XiaomiLYWSD03MMC::parse_device() wrong address.");
     return false;
+  }
 
   auto res = xiaomi_ble::parse_xiaomi(device);
-  if (!res.has_value())
+  if (!res.has_value()) {
+    //ESP_LOGD(TAG, "XiaomiLYWSD03MMC::parse_device() no result.");
     return false;
+  }
 
   if (res->temperature.has_value() && this->temperature_ != nullptr)
     this->temperature_->publish_state(*res->temperature);

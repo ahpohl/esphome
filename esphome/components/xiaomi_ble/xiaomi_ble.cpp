@@ -3,8 +3,8 @@
 
 #include <vector>
 #include <algorithm>
-#include <sstream>
-#include <iomanip>
+//#include <sstream>
+//#include <iomanip>
 #include <string.h>
 #include <mbedtls/ccm.h>
 #include <mbedtls/error.h>
@@ -76,6 +76,8 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
 
 bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data)
 {
+  //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi_service_data() called.");
+
   if (!service_data.uuid.contains(0x95, 0xFE)) {
     ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
     return false;
@@ -115,7 +117,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     // instead of using the dummy key given here
     uint8_t bindkey[16] = {0xCF, 0xC7, 0xCC, 0x89, 0x2F, 0x4E, 0x32, 0xF7,
                            0xA7, 0x33, 0x08, 0x6c, 0xF3, 0x44, 0x3C, 0xB0};
-    int ret = decrypt_xiaomi_payload(service_data, bindkey);
+    int ret = decrypt_xiaomi_payload(raw, bindkey);
   }
 
   uint8_t raw_offset = is_lywsdcgq || is_cgg1 ? 11 : 12;
@@ -158,14 +160,18 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
 
 optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device)
 {
+  //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() called.");
+
   XiaomiParseResult result;
   bool success = false;
   for (auto &service_data : device.get_service_datas()) {
     if (parse_xiaomi_service_data(result, service_data))
       success = true;
   }
-  if (!success)
+  if (!success) {
+    //ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() parse service data failed.");
     return {};
+  }
   return result;
 }
 
@@ -174,8 +180,10 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   //ESP_LOGD(TAG, "XiaomiListener::parse_device() called.");
 
   auto res = parse_xiaomi(device);
-  if (!res.has_value())
+  if (!res.has_value()) {
+    //ESP_LOGD(TAG, "XiaomiListener::parse_device() no value.");
     return false;
+  }
 
   const char *name = "HHCCJCY01";
   if (res->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
@@ -212,10 +220,8 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-bool decrypt_xiaomi_payload(esp32_ble_tracker::ServiceData const& t_service_data, uint8_t const* t_bindkey)
+bool decrypt_xiaomi_payload(std::vector<uint8_t>& t_raw, uint8_t const* t_bindkey)
 {
-  std::vector<uint8_t>(t_raw) = t_service_data.data;
-
   if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
     ESP_LOGD(TAG, "CCM - Payload has wrong size (%d)!", t_raw.size());
     return false;
@@ -292,13 +298,13 @@ bool decrypt_xiaomi_payload(esp32_ble_tracker::ServiceData const& t_service_data
   );
 
   if (ret) {
-    ESP_LOGD(TAG, "Name      : %s", vector.name);
-    ESP_LOGD(TAG, "MAC       : %s", hexstring(mac_address, 6).c_str());
-    ESP_LOGD(TAG, "Packet    : %s", hexstring(t_raw.data(), t_raw.size()).c_str());
-    ESP_LOGD(TAG, "Key       : %s", hexstring(vector.key, vector.keysize).c_str());
-    ESP_LOGD(TAG, "Iv        : %s", hexstring(vector.iv, vector.ivsize).c_str());
-    ESP_LOGD(TAG, "Cipher    : %s", hexstring(vector.ciphertext, vector.datasize).c_str());
-    ESP_LOGD(TAG, "Tag       : %s", hexstring(vector.tag, vector.tagsize).c_str());
+    //ESP_LOGD(TAG, "Name      : %s", vector.name);
+    //ESP_LOGD(TAG, "MAC       : %s", hexstring(mac_address, 6).c_str());
+    //ESP_LOGD(TAG, "Packet    : %s", hexstring(t_raw.data(), t_raw.size()).c_str());
+    //ESP_LOGD(TAG, "Key       : %s", hexstring(vector.key, vector.keysize).c_str());
+    //ESP_LOGD(TAG, "Iv        : %s", hexstring(vector.iv, vector.ivsize).c_str());
+    //ESP_LOGD(TAG, "Cipher    : %s", hexstring(vector.ciphertext, vector.datasize).c_str());
+    //ESP_LOGD(TAG, "Tag       : %s", hexstring(vector.tag, vector.tagsize).c_str());
     char err[100] = {0};
     mbedtls_strerror(ret, err, 99);
     ESP_LOGD(TAG, "%s.", err);
@@ -314,12 +320,13 @@ bool decrypt_xiaomi_payload(esp32_ble_tracker::ServiceData const& t_service_data
     *it = *(p++);
   }
 
-  ESP_LOGD(TAG, "Plaintext : %s", hexstring(t_raw.data()+12, vector.datasize).c_str());
+  //ESP_LOGD(TAG, "Plaintext : %s", hexstring(t_raw.data()+12, vector.datasize).c_str());
 
   mbedtls_ccm_free(&ctx);
   return true;
 }
 
+/*
 std::string hexstring(uint8_t const* t_raw, size_t t_length)
 {
   std::stringstream ss;
@@ -329,6 +336,7 @@ std::string hexstring(uint8_t const* t_raw, size_t t_length)
   }
   return ss.str();
 }
+*/
 
 }  // namespace xiaomi_ble
 }  // namespace esphome
