@@ -83,7 +83,7 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
 
   auto raw = service_data.data;
-  //std::vector<uint8_t>(raw) = service_data.data;
+  // std::vector<uint8_t>(raw) = service_data.data;
 
   if ((raw.size()) < 14 || (raw.size() > 23)) {
     ESP_LOGVV(TAG, "Xiaomi service data has wrong size (%d)!", raw.size());
@@ -138,7 +138,8 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   // Byte 3..3+len-1: data point value
 
   uint8_t *raw_data = raw.data() + raw_offset;
-  ESP_LOGD(TAG, "parse_xiaomi_data_byte(): type %02x, data %s", raw_data[0], hexencode(raw_data + 3, raw_data[2]).c_str());
+  // ESP_LOGD(TAG, "parse_xiaomi_data_byte(): type %02x, data %s", raw_data[0],
+  //         hexencode(raw_data + 3, raw_data[2]).c_str());
 
   if (parse_xiaomi_data_byte(raw_data[0], raw_data + 3, raw_data[2], result)) {
     return true;
@@ -185,6 +186,39 @@ optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &d
     return {};
   }
   // ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() result address (0x%x).", &result);
+
+  const char *name = "HHCCJCY01";
+  if (result.type == XiaomiParseResult::TYPE_LYWSDCGQ) {
+    name = "LYWSDCGQ";
+  } else if (result.type == XiaomiParseResult::TYPE_LYWSD02) {
+    name = "LYWSD02";
+  } else if (result.type == XiaomiParseResult::TYPE_CGG1) {
+    name = "CGG1";
+  } else if (result.type == XiaomiParseResult::TYPE_LYWSD03MMC) {
+    name = "LYWSD03MMC";
+  }
+
+  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, device.address_str().c_str());
+
+  if (result.temperature.has_value()) {
+    ESP_LOGD(TAG, "  Temperature: %.1f°C", result.temperature.value());
+  }
+  if (result.humidity.has_value()) {
+    ESP_LOGD(TAG, "  Humidity: %.1f%%", result.humidity.value());
+  }
+  if (result.battery_level.has_value()) {
+    ESP_LOGD(TAG, "  Battery Level: %.0f%%", result.battery_level.value());
+  }
+  if (result.conductivity.has_value()) {
+    ESP_LOGD(TAG, "  Conductivity: %.0fµS/cm", result.conductivity.value());
+  }
+  if (result.illuminance.has_value()) {
+    ESP_LOGD(TAG, "  Illuminance: %.0flx", result.illuminance.value());
+  }
+  if (result.moisture.has_value()) {
+    ESP_LOGD(TAG, "  Moisture: %.0f%%", result.moisture.value());
+  }
+
   return result;
 }
 
@@ -198,7 +232,7 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
     }
     return false;
   }
-
+/*
   const char *name = "HHCCJCY01";
   if (res->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
     name = "LYWSDCGQ";
@@ -230,7 +264,7 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
   if (res->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *res->moisture);
   }
-
+*/
   return true;
 }
 
@@ -256,23 +290,23 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindke
     return false;
   }
 
-  AESVector_t vector = {.name        = "LYWSD03MMC AES-128 CCM",
-                        .key         = {0},
-                        .plaintext   = {0},
-                        .ciphertext  = {0},
-                        .authdata    = {0x11},
-                        .iv          = {0},
-                        .tag         = {0},
-                        .keysize     = 16,
-                        .authsize    = 1,
-                        .datasize    = 4, // battery
-                        .tagsize     = 4,
-                        .ivsize      = 12
+  AESVector_t vector = {.name = "LYWSD03MMC AES-128 CCM",
+                        .key = {0},
+                        .plaintext = {0},
+                        .ciphertext = {0},
+                        .authdata = {0x11},
+                        .iv = {0},
+                        .tag = {0},
+                        .keysize = 16,
+                        .authsize = 1,
+                        .datasize = 4, // battery
+                        .tagsize = 4,
+                        .ivsize = 12
   };
 
   int offset = 0;
   if (t_raw.size() == 23) {
-    vector.datasize = 5; // temperature or humidity
+    vector.datasize = 5;  // temperature or humidity
     offset = 1;
   }
 
@@ -280,9 +314,9 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindke
   memcpy(vector.key, t_bindkey, vector.keysize);
   memcpy(vector.ciphertext, v + 11, vector.datasize);
   memcpy(vector.tag, v + 18 + offset, vector.tagsize);
-  memcpy(vector.iv, v + 5, 6);               // MAC address reversed
-  memcpy(vector.iv + 6, v + 2, 3);           // sensor type (2) + packet id (1)
-  memcpy(vector.iv + 9, v + 15 + offset, 3); // payload counter
+  memcpy(vector.iv, v + 5, 6);                // MAC address reversed
+  memcpy(vector.iv + 6, v + 2, 3);            // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + 15 + offset, 3);  // payload counter
 
   uint8_t mac_address[6] = {0};
   memcpy(mac_address, v + 10, 1);
