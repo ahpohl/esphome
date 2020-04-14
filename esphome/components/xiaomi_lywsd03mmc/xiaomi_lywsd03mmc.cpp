@@ -44,9 +44,9 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   return true;
 }
 
-void XiaomiLYWSD03MMC::set_bindkey(std::string const& t_bindkey) {
+void XiaomiLYWSD03MMC::set_bindkey(const std::string &t_bindkey) {
   if (t_bindkey.size() != 16) {
-      return;
+    return;
   }
   memcpy(bindkey_, t_bindkey.c_str(), t_bindkey.size());
 }
