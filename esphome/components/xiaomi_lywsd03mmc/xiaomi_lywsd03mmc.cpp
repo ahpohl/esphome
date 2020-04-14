@@ -18,20 +18,17 @@ void XiaomiLYWSD03MMC::dump_config() {
 
 bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
-    // ESP_LOGD(TAG, "XiaomiLYWSD03MMC::parse_device() wrong MAC address.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): unknown MAC address.");
     return false;
   }
   for (auto &service_data : device.get_service_datas()) {
     if (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_))) {
-      // ESP_LOGD(TAG, "xiaomi_ble::decrypt_xiaomi_payload() failed.");
       return false;
     }
-    // ESP_LOGD(TAG, "Packet : %s", hexencode(service_data.data.data(), service_data.data.size()).c_str());
   }
 
   auto res = xiaomi_ble::parse_xiaomi(device);
   if (!res.has_value()) {
-    // ESP_LOGD(TAG, "xiaomi_ble::parse_xiaomi() no result.");
     return false;
   }
 
