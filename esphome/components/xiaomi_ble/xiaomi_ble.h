@@ -17,9 +17,6 @@ struct XiaomiParseResult {
   optional<float> conductivity;
   optional<float> illuminance;
   optional<float> moisture;
-  bool has_data;  // 0x40
-  bool has_capability;  // 0x20
-  bool has_encryption;  // 0x08
 };
 
 bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result);
