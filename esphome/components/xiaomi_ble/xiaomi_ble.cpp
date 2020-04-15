@@ -16,10 +16,12 @@ namespace xiaomi_ble {
 static const char *TAG = "xiaomi_ble";
 
 bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result) {
-  if ((data_length < 1) || (data_length > 4)) {
-    ESP_LOGVV(TAG, "parse_xiaomi_data_byte(): payload has unknown size (%d)!", data_length);
-    return false;
-  }
+  /*
+    if ((data_length < 1) || (data_length > 4)) {
+      ESP_LOGD(TAG, "parse_xiaomi_data_byte(): payload has unknown size (%d)!", data_length);
+      return false;
+    }
+  */
   switch (data_type) {
     case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
       if (data_length != 4)
@@ -77,28 +79,28 @@ bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data
 
 bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracker::ServiceData &service_data) {
   if (!service_data.uuid.contains(0x95, 0xFE)) {
-    ESP_LOGVV(TAG, "Xiaomi no service data UUID magic bytes");
+    ESP_LOGD(TAG, "parse_xiaomi_service_data(): no service data UUID magic bytes");
     return false;
   }
 
   auto raw = service_data.data;
 
-  if ((raw.size()) < 14 || (raw.size() > 23)) {
-    ESP_LOGVV(TAG, "Xiaomi service data has wrong size (%d)!", raw.size());
+  if (raw.size() < 14) {
+    ESP_LOGD(TAG, "parse_xiaomi_service_data(): service data too short (%d)!", raw.size());
     return false;
   }
 
-  // ESP_LOGD(TAG, "parse_xiaomi_service_data(): data packet received.");
-  // ESP_LOGD(TAG, "Packet : %s", hexencode(raw.data(), raw.size()).c_str());
+  ESP_LOGD(TAG, "parse_xiaomi_service_data(): data packet received.");
+  ESP_LOGD(TAG, "Packet : %s", hexencode(raw.data(), raw.size()).c_str());
 
   bool is_lywsdcgq = (raw[1] & 0x20) == 0x20 && raw[2] == 0xAA && raw[3] == 0x01;
   bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
   bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
   bool is_cgg1 = ((raw[1] & 0x30) == 0x30 || (raw[1] & 0x20) == 0x20) && raw[2] == 0x47 && raw[3] == 0x03;
-  bool is_lywsd03mmc = raw[2] == 0x5b && raw[3] == 0x05;
+  bool is_lywsd03mmc = (raw[1] & 0x58) == 0x58 && raw[2] == 0x5b && raw[3] == 0x05;
 
   if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc) {
-    ESP_LOGVV(TAG, "Xiaomi no magic bytes");
+    ESP_LOGD(TAG, "parse_xiaomi_service_data(): no magic bytes");
     return false;
   }
 
@@ -114,10 +116,11 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   }
 
   if (is_lywsd03mmc && (raw[0] & 0x08)) {
+    ESP_LOGD(TAG, "parse_xiaomi_service_data(): encrypted packet received.");
     return false;
   }
 
-  uint8_t raw_offset = (is_cgg1) ? 12 : 11;
+  uint8_t raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc ? 11 : 12;
 
   // Data point specs
   // Byte 0: type
@@ -211,9 +214,12 @@ optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &d
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   auto res = parse_xiaomi(device);
+
   if (!res.has_value()) {
     return false;
   }
+
+  ESP_LOGD(TAG, "XiaomiListener::parse_device(): res.has_value: %s", res.has_value() ? "true" : "false");
 
   // res.has_value() always returns false when xiaomi_ble::decrypt_xiaomi_payload()
   // is called from XiaomiLYWSD03MMC::parse_device()
@@ -257,18 +263,18 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindkey) {
   if (!(t_raw[0] & 0x40)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): not a data frame!");
-    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGD(TAG, "decrypt_xiaomi_payload(): not a data frame!");
+    ESP_LOGD(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
     return false;
   }
   if ((t_raw[0] & 0x20) && !(t_raw[0] & 0x08)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet is not encrypted!");
-    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGD(TAG, "decrypt_xiaomi_payload(): data packet is not encrypted!");
+    ESP_LOGD(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
     return false;
   }
   if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", t_raw.size());
-    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGD(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", t_raw.size());
+    ESP_LOGD(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
     return false;
   }
 
