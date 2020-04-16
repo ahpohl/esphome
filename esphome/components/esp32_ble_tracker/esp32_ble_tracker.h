@@ -89,6 +89,7 @@ class ESPBTDevice {
   const std::vector<ServiceData> &get_manufacturer_datas() const { return manufacturer_datas_; }
 
   const std::vector<ServiceData> &get_service_datas() const { return service_datas_; }
+  const ServiceData &get_service_data() const { return service_data_; }
 
   optional<ESPBLEiBeacon> get_ibeacon() const {
     for (auto &it : this->manufacturer_datas_) {
@@ -114,6 +115,7 @@ class ESPBTDevice {
   std::vector<ESPBTUUID> service_uuids_;
   std::vector<ServiceData> manufacturer_datas_{};
   std::vector<ServiceData> service_datas_{};
+  ServiceData service_data_;
 };
 
 class ESP32BLETracker;
