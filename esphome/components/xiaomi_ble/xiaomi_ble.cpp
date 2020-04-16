@@ -244,10 +244,10 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
   // result reporting is not working, because the message has not been parsed yet.
   // the xiaomi logic is currently quite broken as the header and message needs
   // to be parsed multiple times, once here and then again for each configured xiaomi device.
-  // the results need to be passed on to the device for further processing
-  // i.e. message decryption if neccessary and then parsing of the complete message.
+  // the results from the header should to be passed on to each device for further processing
+  // i.e. message decryption if neccessary and parsing of the data.
   // the bind key is only available to the respective xiaomi device class and hence
-  // message decryption cannot be done on the fly in xiaomi_ble.
+  // message decryption cannot be done on the fly in class xiaomi_ble
 
   if (res->temperature.has_value()) {
     ESP_LOGD(TAG, "  Temperature: %.1f°C", *res->temperature);
