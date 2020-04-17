@@ -122,6 +122,13 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
     return {};
   }
 
+  static uint8_t last_frame_count = 0;
+  if (is_lywsd03mmc && result.has_data && last_frame_count == raw[4]) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate packet received (%d).", last_frame_count);
+    last_frame_count = raw[4];
+    return {};
+  }
+
   result.raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc ? 11 : 12;
 
   result.type = XiaomiParseResult::TYPE_HHCCJCY01;
