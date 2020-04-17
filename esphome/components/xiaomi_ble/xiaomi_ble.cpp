@@ -98,6 +98,13 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     return false;
   }
 
+  static uint8_t last_frame_count = 0;
+  if (is_lywsd03mmc && (raw[0] & 0x20) && (last_frame_count == raw[4])) {
+    ESP_LOGVV(TAG, "parse_xiaomi_service_data(): duplicate data packet received (%d).", last_frame_count);
+    last_frame_count = raw[4];
+    return false;
+  }
+
   result.type = XiaomiParseResult::TYPE_HHCCJCY01;
   if (is_lywsdcgq) {
     result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
