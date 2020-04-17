@@ -3,10 +3,7 @@
 #include "esphome/core/helpers.h"
 
 #include <vector>
-#include <algorithm>
-#include <string.h>
 #include <mbedtls/ccm.h>
-#include <mbedtls/error.h>
 
 #ifdef ARDUINO_ARCH_ESP32
 
@@ -179,9 +176,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
 
   int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, vector.key, vector.keysize * 8);
   if (ret) {
-    char err[100] = {0};
-    mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "%s.", err);
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): mbedtls_ccm_setkey() failed.");
     mbedtls_ccm_free(&ctx);
     return false;
   }
