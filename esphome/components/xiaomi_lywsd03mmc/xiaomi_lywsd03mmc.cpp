@@ -18,7 +18,7 @@ void XiaomiLYWSD03MMC::dump_config() {
 
 bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
-    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): unknown MAC address.");
+    ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
   }
   for (auto &service_data : device.get_service_datas()) {
@@ -29,6 +29,7 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
 
   auto res = xiaomi_ble::parse_xiaomi(device);
   if (!res.has_value()) {
+    ESP_LOGVV(TAG, "parse_device(): no service data received.");
     return false;
   }
 
