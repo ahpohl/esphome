@@ -87,6 +87,11 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
     return false;
   }
 
+  if (!(raw[0] & 0x40)) {
+    ESP_LOGVV(TAG, "parse_device(): service data has no DATA flag.");
+    return false;
+  }
+
   bool is_lywsdcgq = (raw[1] & 0x20) == 0x20 && raw[2] == 0xAA && raw[3] == 0x01;
   bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
   bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
