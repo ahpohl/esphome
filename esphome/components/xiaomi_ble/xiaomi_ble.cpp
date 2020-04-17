@@ -138,20 +138,15 @@ bool parse_xiaomi_service_data(XiaomiParseResult &result, const esp32_ble_tracke
   return false;
 }
 
-bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindkey) {
-  if (!(t_raw[0] & 0x40)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): not a data frame!");
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
-    return false;
-  }
-  if ((t_raw[0] & 0x20) && !(t_raw[0] & 0x08)) {
+bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
+  if (!(raw[0] & 0x08)) {
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet is not encrypted!");
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     return false;
   }
-  if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", t_raw.size());
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+  if ((raw.size() < 22) || (raw.size() > 23)) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
+    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     return false;
   }
 
@@ -168,13 +163,13 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindke
                          .ivsize = 12};
 
   int offset = 0;
-  if (t_raw.size() == 23) {
+  if (raw.size() == 23) {
     vector.datasize = 5;  // temperature or humidity
     offset = 1;
   }
 
-  const uint8_t *v = t_raw.data();
-  memcpy(vector.key, t_bindkey, vector.keysize);
+  const uint8_t *v = raw.data();
+  memcpy(vector.key, bindkey, vector.keysize);
   memcpy(vector.ciphertext, v + 11, vector.datasize);
   memcpy(vector.tag, v + 18 + offset, vector.tagsize);
   memcpy(vector.iv, v + 5, 6);                // MAC address reversed
@@ -204,7 +199,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindke
 
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
     ESP_LOGVV(TAG, "  MAC address : %s", hexencode(mac_address, 6).c_str());
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     ESP_LOGVV(TAG, "  Key : %s", hexencode(vector.key, vector.keysize).c_str());
     ESP_LOGVV(TAG, "  Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
     ESP_LOGVV(TAG, "  Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
@@ -215,12 +210,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindke
 
   // replace encrypted payload with plaintext
   uint8_t *p = vector.plaintext;
-  for (std::vector<uint8_t>::iterator it = t_raw.begin() + 11; it != t_raw.begin() + 11 + vector.datasize; ++it) {
+  for (std::vector<uint8_t>::iterator it = raw.begin() + 11; it != raw.begin() + 11 + vector.datasize; ++it) {
     *it = *(p++);
   }
 
   // clear encrypted flag
-  t_raw[0] &= ~0x08;
+  raw[0] &= ~0x08;
 
   ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
   ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data() + 11, vector.datasize).c_str());

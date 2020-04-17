@@ -22,6 +22,10 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     return false;
   }
   for (auto &service_data : device.get_service_datas()) {
+    if (!(service_data.data[0] & 0x40)) {
+      ESP_LOGVV(TAG, "parse_device(): service data has no DATA flag.");
+      return false;
+    }
     if (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_))) {
       return false;
     }
@@ -29,7 +33,7 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
 
   auto res = xiaomi_ble::parse_xiaomi(device);
   if (!res.has_value()) {
-    ESP_LOGVV(TAG, "parse_device(): no service data received.");
+    ESP_LOGVV(TAG, "parse_device(): message contains no results.");
     return false;
   }
 

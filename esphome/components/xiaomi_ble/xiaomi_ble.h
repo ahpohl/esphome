@@ -34,7 +34,7 @@ struct XiaomiAESVector {
 };
 
 bool parse_xiaomi_data_byte(uint8_t data_type, const uint8_t *data, uint8_t data_length, XiaomiParseResult &result);
-bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindkey);
+bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey);
 
 optional<XiaomiParseResult> parse_xiaomi(const esp32_ble_tracker::ESPBTDevice &device);
 
