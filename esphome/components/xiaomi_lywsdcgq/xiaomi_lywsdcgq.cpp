@@ -15,7 +15,7 @@ void XiaomiLYWSDCGQ::dump_config() {
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
-bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override {
+bool XiaomiLYWSDCGQ::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_)
     return false;
 
@@ -40,6 +40,8 @@ bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override {
     ESP_LOGVV(TAG, "parse_device(): message contains no results.");
     return false;
   }
+
+  xiaomi_ble::report_xiaomi_results(res, device.address_str());
 
   if (res->temperature.has_value() && this->temperature_ != nullptr)
     this->temperature_->publish_state(*res->temperature);

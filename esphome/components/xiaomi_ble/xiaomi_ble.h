@@ -40,6 +40,7 @@ struct XiaomiAESVector {
 bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult &result);
 optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDevice &device);
 bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey);
+void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address);
 
 class XiaomiListener : public esp32_ble_tracker::ESPBTDeviceListener {
  public:
