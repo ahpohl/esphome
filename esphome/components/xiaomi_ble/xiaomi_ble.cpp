@@ -2,10 +2,10 @@
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
 
-#include <vector>
-#include <mbedtls/ccm.h>
-
 #ifdef ARDUINO_ARCH_ESP32
+
+#include <vector>
+#include "mbedtls/ccm.h"
 
 namespace esphome {
 namespace xiaomi_ble {
