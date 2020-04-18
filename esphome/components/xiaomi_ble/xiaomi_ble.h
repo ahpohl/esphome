@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/esp32_ble_tracker/esp32_ble_tracker.h"
+#include "esphome/core/helpers.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
