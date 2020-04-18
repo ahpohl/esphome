@@ -18,27 +18,9 @@ class XiaomiHHCCJCY01 : public Component, public esp32_ble_tracker::ESPBTDeviceL
     if (device.address_uint64() != this->address_)
       return false;
 
-    auto res = xiaomi_ble::parse_xiaomi_header(device);
-    if (res->has_capability) {
-      ESP_LOGVV(TAG, "parse_device(): service data has capability flag.");
+    auto res = xiaomi_ble::parse_xiaomi(device);
+    if (!res.has_value())
       return false;
-    }
-
-    if (!res.has_value()) {
-      ESP_LOGVV(TAG, "parse_device(): no service data received.");
-      return false;
-    }
-
-    esp32_ble_tracker::ServiceData service_data = device.get_service_data();
-    if (res->has_encryption) {
-      ESP_LOGVV(TAG, "parse_device(): decryption is currently not supported on this device.");
-      return false;
-    }
-
-    if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
-      ESP_LOGVV(TAG, "parse_device(): message contains no results.");
-      return false;
-    }
 
     if (res->temperature.has_value() && this->temperature_ != nullptr)
       this->temperature_->publish_state(*res->temperature);

@@ -35,8 +35,7 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
 
   esp32_ble_tracker::ServiceData service_data = device.get_service_data();
   if (res->has_encryption) {
-    ESP_LOGVV(TAG, "parse_device(): encrypted service data received.");
-    xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
+      xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
   }
 
   if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
