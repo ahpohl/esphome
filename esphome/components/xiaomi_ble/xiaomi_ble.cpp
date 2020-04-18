@@ -106,8 +106,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
   result.has_capability = (raw[0] & 0x20) ? true : false;
   result.has_encryption = (raw[0] & 0x08) ? true : false;
 
-  if (!result.has_data) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has no DATA flag.");
+  if (result.has_capability) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has capability flag.");
     return {};
   }
 

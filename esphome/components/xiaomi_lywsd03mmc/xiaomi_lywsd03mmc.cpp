@@ -23,8 +23,8 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   }
 
   auto res = xiaomi_ble::parse_xiaomi_header(device);
-  if (!res->has_data) {
-    ESP_LOGVV(TAG, "parse_device(): service data has no DATA flag.");
+  if (res->has_capability) {
+    ESP_LOGVV(TAG, "parse_device(): service data has capability flag.");
     return false;
   }
 
