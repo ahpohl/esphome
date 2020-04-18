@@ -16,10 +16,8 @@ namespace xiaomi_ble {
 static const char *TAG = "xiaomi_ble";
 
 bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult &result) {
-  result.has_encryption = (message[0] & 0x08) ? true : false;  // update encryption status
   if (result.has_encryption) {
     ESP_LOGVV(TAG, "parse_xiaomi_message(): payload is encrypted, stop reading message.");
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(message.data(), message.size()).c_str());
     return false;
   }
 
@@ -224,56 +222,51 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   return true;
 }
 
-void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
-  if (!result.has_value()) {
-    ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");
-    return;
-  }
-
-  const char *name = "HHCCJCY01";
-  if (result->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
-    name = "LYWSDCGQ";
-  } else if (result->type == XiaomiParseResult::TYPE_LYWSD02) {
-    name = "LYWSD02";
-  } else if (result->type == XiaomiParseResult::TYPE_CGG1) {
-    name = "CGG1";
-  } else if (result->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
-    name = "LYWSD03MMC";
-  }
-
-  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());
-
-  if (result->temperature.has_value()) {
-    ESP_LOGD(TAG, "  Temperature: %.1f°C", *result->temperature);
-  }
-  if (result->humidity.has_value()) {
-    ESP_LOGD(TAG, "  Humidity: %.1f%%", *result->humidity);
-  }
-  if (result->battery_level.has_value()) {
-    ESP_LOGD(TAG, "  Battery Level: %.0f%%", *result->battery_level);
-  }
-  if (result->conductivity.has_value()) {
-    ESP_LOGD(TAG, "  Conductivity: %.0fµS/cm", *result->conductivity);
-  }
-  if (result->illuminance.has_value()) {
-    ESP_LOGD(TAG, "  Illuminance: %.0flx", *result->illuminance);
-  }
-  if (result->moisture.has_value()) {
-    ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
-  }
-}
-
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   auto res = parse_xiaomi_header(device);
   if (!res.has_value()) {
     return false;
   }
 
-  // Result reporting moved to separate function, because the message has not been parsed yet
-  // and the results are not available yet. The xiaomi logic seems broken as the header and message needs
+  const char *name = "HHCCJCY01";
+  if (res->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
+    name = "LYWSDCGQ";
+  } else if (res->type == XiaomiParseResult::TYPE_LYWSD02) {
+    name = "LYWSD02";
+  } else if (res->type == XiaomiParseResult::TYPE_CGG1) {
+    name = "CGG1";
+  } else if (res->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
+    name = "LYWSD03MMC";
+  }
+
+  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, device.address_str().c_str());
+
+  // result reporting is not working, because the message has not been parsed yet.
+  // the xiaomi logic is currently quite broken as the header and message needs
   // to be parsed multiple times, once here and then again for each configured xiaomi device.
-  // The bindkey is only available in class XiaomiLYWSD03MMC and hence the message cannot be
-  // parsed here.
+  // the results from the header should to be passed on to each device for further processing
+  // i.e. message decryption if neccessary and parsing of the data.
+  // the bind key is only available to the respective xiaomi device class and hence
+  // message decryption cannot be done on the fly in class xiaomi_ble
+
+  if (res->temperature.has_value()) {
+    ESP_LOGD(TAG, "  Temperature: %.1f°C", *res->temperature);
+  }
+  if (res->humidity.has_value()) {
+    ESP_LOGD(TAG, "  Humidity: %.1f%%", *res->humidity);
+  }
+  if (res->battery_level.has_value()) {
+    ESP_LOGD(TAG, "  Battery Level: %.0f%%", *res->battery_level);
+  }
+  if (res->conductivity.has_value()) {
+    ESP_LOGD(TAG, "  Conductivity: %.0fµS/cm", *res->conductivity);
+  }
+  if (res->illuminance.has_value()) {
+    ESP_LOGD(TAG, "  Illuminance: %.0flx", *res->illuminance);
+  }
+  if (res->moisture.has_value()) {
+    ESP_LOGD(TAG, "  Moisture: %.0f%%", *res->moisture);
+  }
 
   return true;
 }

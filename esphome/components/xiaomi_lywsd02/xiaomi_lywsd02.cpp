@@ -14,7 +14,7 @@ void XiaomiLYWSD02::dump_config() {
   LOG_SENSOR("  ", "Humidity", this->humidity_);
 }
 
-bool XiaomiLYWSD02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool parse_device(const esp32_ble_tracker::ESPBTDevice &device) override {
   if (device.address_uint64() != this->address_)
     return false;
 
@@ -39,8 +39,6 @@ bool XiaomiLYWSD02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     ESP_LOGVV(TAG, "parse_device(): message contains no results.");
     return false;
   }
-
-  xiaomi_ble::report_xiaomi_results(res, device.address_str());
 
   if (res->temperature.has_value() && this->temperature_ != nullptr)
     this->temperature_->publish_state(*res->temperature);

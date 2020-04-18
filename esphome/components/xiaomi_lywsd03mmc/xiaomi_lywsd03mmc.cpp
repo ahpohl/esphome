@@ -44,15 +44,12 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     return false;
   }
 
-  xiaomi_ble::report_xiaomi_results(res, device.address_str());
-
   if (res->temperature.has_value() && this->temperature_ != nullptr)
     this->temperature_->publish_state(*res->temperature);
   if (res->humidity.has_value() && this->humidity_ != nullptr)
     this->humidity_->publish_state(*res->humidity);
   if (res->battery_level.has_value() && this->battery_level_ != nullptr)
     this->battery_level_->publish_state(*res->battery_level);
-
   return true;
 }
 
