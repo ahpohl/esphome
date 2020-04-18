@@ -15,7 +15,7 @@ namespace xiaomi_ble {
 
 static const char *TAG = "xiaomi_ble";
 
-bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult &result) {
+bool parse_xiaomi_message(std::vector<uint8_t> &raw, XiaomiParseResult &result) {
 
   // Data point specs
   // Byte 0: type
@@ -23,16 +23,22 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   // Byte 2: length
   // Byte 3..3+len-1: data point value
 
-  const uint8_t *raw = message.data() + result.raw_offset;
-  const uint8_t *data = raw + 3;
-  const uint8_t data_length = raw[2];
+  uint8_t *raw_data = raw.data() + result.raw_offset;
+
+  // ESP_LOGD(TAG, "parse_xiaomi_data_byte(): type %02x, data %s", raw_data[0],
+  //         hexencode(raw_data + 3, raw_data[2]).c_str());
+
+  uint8_t data_type = raw_data[0];
+  uint8_t data_length = raw_data[2]);
+  uint8_t data[7] = {0};
 
   if ((data_length < 1) || (data_length > 4)) {
-     ESP_LOGVV(TAG, "parse_xiaomi_message(): payload has wrong size (%d)!", data_length);
+     ESP_LOGVV(TAG, "parse_xiaomi_data_byte(): payload has wrong size (%d)!", data_length);
      return false;
   }
 
-  switch (raw[0]) {
+  memcpy(data, raw_data, data_length);
+  switch (data_type) {
     case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
       if (data_length != 4)
         return false;
@@ -93,18 +99,18 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
   XiaomiParseResult result;
 
   esp32_ble_tracker::ServiceData service_data = device.get_service_data();
+  ESP_LOGVV(TAG, "parse_xiaomi_header(): %s", hexencode(service_data.data.data(),
+                                                                   service_data.data.size()).c_str());
+
   if (!service_data.uuid.contains(0x95, 0xFE)) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): no service data UUID magic bytes.");
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): no service data UUID magic bytes");
     return {};
   }
 
   auto raw = service_data.data;
-  result.has_data = (raw[0] & 0x40) ? true : false;
-  result.has_capability = (raw[0] & 0x20) ? true : false;
-  result.has_encryption = (raw[0] & 0x08) ? true : false;
 
-  if (result.has_capability) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has capability flag.");
+  if (raw.size() < 14) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data too short (%d)!", raw.size());
     return {};
   }
 
@@ -115,11 +121,15 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
   bool is_lywsd03mmc = (raw[1] & 0x58) == 0x58 && raw[2] == 0x5b && raw[3] == 0x05;
 
   if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes");
     return {};
   }
 
   result.raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc ? 11 : 12;
+
+  result.has_data = (raw[0] & 0x40) ? true : false;
+  result.has_capability = (raw[0] & 0x20) ? true : false;
+  result.has_encryption = (raw[0] & 0x08) ? true : false;
 
   result.type = XiaomiParseResult::TYPE_HHCCJCY01;
   if (is_lywsdcgq) {
@@ -133,89 +143,6 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
   }
 
   return result;
-}
-
-bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
-  if ((raw.size() < 22) || (raw.size() > 23)) {
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
-    return false;
-  }
-
-  XiaomiAESVector vector {.key = {0},
-                          .plaintext = {0},
-                          .ciphertext = {0},
-                          .authdata = {0x11},
-                          .iv = {0},
-                          .tag = {0},
-                          .keysize = 16,
-                          .authsize = 1,
-                          .datasize = 4,  // battery
-                          .tagsize = 4,
-                          .ivsize = 12};
-
-  int offset = 0;
-  if (raw.size() == 23) {
-    vector.datasize = 5;  // temperature or humidity
-    offset = 1;
-  }
-
-  const uint8_t *v = raw.data();
-  memcpy(vector.key, bindkey, vector.keysize);
-  memcpy(vector.ciphertext, v + 11, vector.datasize);
-  memcpy(vector.tag, v + 18 + offset, vector.tagsize);
-  memcpy(vector.iv, v + 5, 6);                // MAC address reversed
-  memcpy(vector.iv + 6, v + 2, 3);            // sensor type (2) + packet id (1)
-  memcpy(vector.iv + 9, v + 15 + offset, 3);  // payload counter
-
-  mbedtls_ccm_context ctx;
-  mbedtls_ccm_init(&ctx);
-
-  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, vector.key, vector.keysize * 8);
-  if (ret) {
-    char err[100] = {0};
-    mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "%s.", err);
-    mbedtls_ccm_free(&ctx);
-    return false;
-  }
-
-  ret = mbedtls_ccm_auth_decrypt(&ctx, vector.datasize, vector.iv, vector.ivsize, vector.authdata, vector.authsize,
-                                 vector.ciphertext, vector.plaintext, vector.tag, vector.tagsize);
-  if (ret) {
-    uint8_t mac_address[6] = {0};
-    memcpy(mac_address, v + 10, 1);
-    memcpy(mac_address + 1, v + 9, 1);
-    memcpy(mac_address + 2, v + 8, 1);
-    memcpy(mac_address + 3, v + 7, 1);
-    memcpy(mac_address + 4, v + 6, 1);
-    memcpy(mac_address + 5, v + 5, 1);
-
-    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
-    ESP_LOGVV(TAG, "  MAC address : %s", hexencode(mac_address, 6).c_str());
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
-    ESP_LOGVV(TAG, "  Key : %s", hexencode(vector.key, vector.keysize).c_str());
-    ESP_LOGVV(TAG, "  Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
-    ESP_LOGVV(TAG, "  Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
-    ESP_LOGVV(TAG, "  Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
-    mbedtls_ccm_free(&ctx);
-    return false;
-  }
-
-  // replace encrypted payload with plaintext
-  uint8_t *p = vector.plaintext;
-  for (std::vector<uint8_t>::iterator it = raw.begin() + 11; it != raw.begin() + 11 + vector.datasize; ++it) {
-    *it = *(p++);
-  }
-
-  // clear encrypted flag
-  raw[0] &= ~0x08;
-
-  ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
-  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data()+11, vector.datasize).c_str());
-
-  mbedtls_ccm_free(&ctx);
-  return true;
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -257,6 +184,101 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
   }
 
 
+  return true;
+}
+
+bool decrypt_xiaomi_payload(std::vector<uint8_t> &t_raw, const uint8_t *t_bindkey) {
+  if (!(t_raw[0] & 0x40)) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): not a data frame!");
+    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    return false;
+  }
+  if ((t_raw[0] & 0x20) && !(t_raw[0] & 0x08)) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet is not encrypted!");
+    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    return false;
+  }
+  if ((t_raw.size() < 22) || (t_raw.size() > 23)) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", t_raw.size());
+    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    return false;
+  }
+
+  AESVector_t vector = {.name = "LYWSD03MMC AES-128 CCM",
+                        .key = {0},
+                        .plaintext = {0},
+                        .ciphertext = {0},
+                        .authdata = {0x11},
+                        .iv = {0},
+                        .tag = {0},
+                        .keysize = 16,
+                        .authsize = 1,
+                        .datasize = 4,  // battery
+                        .tagsize = 4,
+                        .ivsize = 12};
+
+  int offset = 0;
+  if (t_raw.size() == 23) {
+    vector.datasize = 5;  // temperature or humidity
+    offset = 1;
+  }
+
+  const uint8_t *v = t_raw.data();
+  memcpy(vector.key, t_bindkey, vector.keysize);
+  memcpy(vector.ciphertext, v + 11, vector.datasize);
+  memcpy(vector.tag, v + 18 + offset, vector.tagsize);
+  memcpy(vector.iv, v + 5, 6);                // MAC address reversed
+  memcpy(vector.iv + 6, v + 2, 3);            // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + 15 + offset, 3);  // payload counter
+
+  uint8_t mac_address[6] = {0};
+  memcpy(mac_address, v + 10, 1);
+  memcpy(mac_address + 1, v + 9, 1);
+  memcpy(mac_address + 2, v + 8, 1);
+  memcpy(mac_address + 3, v + 7, 1);
+  memcpy(mac_address + 4, v + 6, 1);
+  memcpy(mac_address + 5, v + 5, 1);
+
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+
+  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, vector.key, vector.keysize * 8);
+  if (ret) {
+    char err[100] = {0};
+    mbedtls_strerror(ret, err, 99);
+    ESP_LOGD(TAG, "%s.", err);
+    mbedtls_ccm_free(&ctx);
+    return false;
+  }
+
+  ret = mbedtls_ccm_auth_decrypt(&ctx, vector.datasize, vector.iv, vector.ivsize, vector.authdata, vector.authsize,
+                                 vector.ciphertext, vector.plaintext, vector.tag, vector.tagsize);
+  if (ret) {
+    ESP_LOGVV(TAG, "Name : %s", vector.name);
+    ESP_LOGVV(TAG, "MAC address : %s", hexencode(mac_address, 6).c_str());
+    ESP_LOGVV(TAG, "Packet : %s", hexencode(t_raw.data(), t_raw.size()).c_str());
+    ESP_LOGVV(TAG, "Key : %s", hexencode(vector.key, vector.keysize).c_str());
+    ESP_LOGVV(TAG, "Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
+    ESP_LOGVV(TAG, "Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
+    ESP_LOGVV(TAG, "Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
+    mbedtls_ccm_free(&ctx);
+    return false;
+  }
+
+  // replace encrypted payload with plaintext
+  uint8_t *p = vector.plaintext;
+  for (std::vector<uint8_t>::iterator it = t_raw.begin() + 11; it != t_raw.begin() + 11 + vector.datasize; ++it) {
+    *it = *(p++);
+  }
+
+  // clear encrypted flag
+  t_raw[0] &= ~0x08;
+
+  ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
+  ESP_LOGVV(TAG, "Plaintext : %s", hexencode(t_raw.data()+11, vector.datasize).c_str());
+
+  mbedtls_ccm_free(&ctx);
   return true;
 }
 

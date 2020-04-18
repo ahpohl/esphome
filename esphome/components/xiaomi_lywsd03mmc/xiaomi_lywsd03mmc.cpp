@@ -23,22 +23,17 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   }
 
   auto res = xiaomi_ble::parse_xiaomi_header(device);
-  if (res->has_capability) {
-    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): service data has capability.");
-    return false;
-  }
-
   if (!res.has_value()) {
-    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): no service data received.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): unknown packet received.");
     return false;
   }
 
   esp32_ble_tracker::ServiceData service_data = device.get_service_data();
-  if (res->has_encryption) {
-      xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
+  if (res.has_encryption) {
+      xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_))
   }
 
-  if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
+  if (!(xiaomi_ble::parse_xiaomi_message(res, service_data.data))) {
     ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): message contains no results.");
     return false;
   }
