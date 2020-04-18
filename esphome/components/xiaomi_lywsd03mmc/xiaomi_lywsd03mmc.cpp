@@ -18,18 +18,18 @@ void XiaomiLYWSD03MMC::dump_config() {
 
 bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
-    ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): unknown MAC address.");
     return false;
   }
 
   auto res = xiaomi_ble::parse_xiaomi_header(device);
   if (res->has_capability) {
-    ESP_LOGVV(TAG, "parse_device(): service data has capability flag.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): service data has capability.");
     return false;
   }
 
   if (!res.has_value()) {
-    ESP_LOGVV(TAG, "parse_device(): no service data received.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): no service data received.");
     return false;
   }
 
@@ -39,7 +39,7 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   }
 
   if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
-    ESP_LOGVV(TAG, "parse_device(): message contains no results.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): message contains no results.");
     return false;
   }
 
