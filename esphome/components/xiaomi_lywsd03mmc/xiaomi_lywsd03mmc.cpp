@@ -28,14 +28,14 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     }
     static uint8_t last_frame_count = 0;
     if (last_frame_count == service_data.data[4]) {
-      ESP_LOGD(TAG, "parse_xiaomi_service_data(): duplicate data packet received (%d).", last_frame_count);
-      ESP_LOGD(TAG, "  Packet : %s", hexencode(service_data.data.data(), service_data.data.size()).c_str());
-      last_frame_count = service_data.data[4];
+      ESP_LOGVV(TAG, "parse_xiaomi_service_data(): duplicate data packet received (%d).", last_frame_count);
+      ESP_LOGVV(TAG, "  Packet : %s", hexencode(service_data.data.data(), service_data.data.size()).c_str());
       return false;
     }
     if (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_))) {
       return false;
     }
+    last_frame_count = service_data.data[4];
   }
 
   auto res = xiaomi_ble::parse_xiaomi(device);
