@@ -16,7 +16,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   result.has_encryption = (message[0] & 0x08) ? true : false;  // update encryption status
   if (result.has_encryption) {
     ESP_LOGVV(TAG, "parse_xiaomi_message(): payload is encrypted, stop reading message.");
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(message.data(), message.size()).c_str());
     return false;
   }
 
@@ -111,6 +110,16 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
     return {};
   }
 
+  static uint8_t last_frame_count = 0;
+  if (last_frame_count == raw[4]) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate data packet received (%d).",
+              static_cast<int>(last_frame_count));
+    result.is_duplicate = true;
+    return {};
+  }
+  last_frame_count = raw[4];
+  result.is_duplicate = false;
+
   bool is_lywsdcgq = (raw[1] & 0x20) == 0x20 && raw[2] == 0xAA && raw[3] == 0x01;
   bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
   bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
@@ -119,13 +128,6 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
 
   if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
-    return {};
-  }
-
-  static uint8_t last_frame_count = 0;
-  if (is_lywsd03mmc && result.has_data && last_frame_count == raw[4]) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate packet received (%d).", last_frame_count);
-    last_frame_count = raw[4];
     return {};
   }
 
@@ -220,16 +222,17 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   raw[0] &= ~0x08;
 
   ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
-  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data() + 11, vector.datasize).c_str());
+  ESP_LOGVV(TAG, "  Plaintext : %s, Packet : %d", hexencode(raw.data() + 11, vector.datasize).c_str(),
+            static_cast<int>(raw[4]));
 
   mbedtls_ccm_free(&ctx);
   return true;
 }
 
-void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
+bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
   if (!result.has_value()) {
     ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");
-    return;
+    return false;
   }
 
   const char *name = "HHCCJCY01";
@@ -263,13 +266,15 @@ void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
   }
+
+  return true;
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  auto res = parse_xiaomi_header(device);
-  if (!res.has_value()) {
-    return false;
-  }
+  //auto res = parse_xiaomi_header(device);
+  //if (!res.has_value()) {
+  //  return false;
+  //}
 
   // Result reporting moved to separate function, because the message has not been parsed yet
   // and the results are not available yet. The xiaomi logic seems broken as the header and message needs

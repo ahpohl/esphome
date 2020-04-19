@@ -21,30 +21,26 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
   }
+  ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
 
   auto res = xiaomi_ble::parse_xiaomi_header(device);
-  if (!res->has_data) {
-    ESP_LOGVV(TAG, "parse_device(): service data has no DATA flag.");
+  if (!res.has_value()) {
     return false;
   }
-
-  if (!res.has_value()) {
-    ESP_LOGVV(TAG, "parse_device(): no service data received.");
+  if (res->is_duplicate) {
     return false;
   }
 
   esp32_ble_tracker::ServiceData service_data = device.get_service_data();
   if (res->has_encryption) {
-    ESP_LOGVV(TAG, "parse_device(): encrypted service data received.");
     xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
   }
-
   if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
-    ESP_LOGVV(TAG, "parse_device(): message contains no results.");
     return false;
   }
-
-  xiaomi_ble::report_xiaomi_results(res, device.address_str());
+  if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
+    return false;
+  }
 
   if (res->temperature.has_value() && this->temperature_ != nullptr)
     this->temperature_->publish_state(*res->temperature);
