@@ -268,19 +268,12 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-
-  // auto res = parse_xiaomi_header(device);
-  // if (!res.has_value()) {
-  //   return false;
-  // }
-
-  // Currently the message header is parsed twice per packet, once by XiaomiListener::parse_device()
+  // Previously the message was parsed twice per packet, once by XiaomiListener::parse_device()
   // and then again by the respective device class's parse_device() function. Parsing the header
   // here and then for each device seems to be unneccessary and complicates the duplicate packet filtering.
   // Hence I disabled the call to parse_xiaomi_header() here and the message parsing is done entirely
-  // in the respecive device instance. The XiaomiListener class is defined in __init__.py and cannot
-  // be removed entirely.
-
+  // in the respecive device instance. The XiaomiListener class is defined in __init__.py and I was not
+  // able to remove it entirely.
   return true;
 }
 
