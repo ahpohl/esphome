@@ -91,10 +91,8 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   return true;
 }
 
-optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDevice &device) {
+optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ServiceData &service_data) {
   XiaomiParseResult result;
-
-  esp32_ble_tracker::ServiceData service_data = device.get_service_data();
   if (!service_data.uuid.contains(0x95, 0xFE)) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no service data UUID magic bytes.");
     return {};
@@ -112,8 +110,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
 
   static uint8_t last_frame_count = 0;
   if (last_frame_count == raw[4]) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate data packet received (%d).",
-              static_cast<int>(last_frame_count));
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate data packet received (%d).", static_cast<int>(last_frame_count));
     result.is_duplicate = true;
     return {};
   }
@@ -271,16 +268,18 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  //auto res = parse_xiaomi_header(device);
-  //if (!res.has_value()) {
-  //  return false;
-  //}
 
-  // Result reporting moved to separate function, because the message has not been parsed yet
-  // and the results are not available yet. The xiaomi logic seems broken as the header and message needs
-  // to be parsed multiple times, once here and then again for each configured xiaomi device.
-  // The bindkey is only available in class XiaomiLYWSD03MMC and hence the message cannot be
-  // parsed here.
+  // auto res = parse_xiaomi_header(device);
+  // if (!res.has_value()) {
+  //   return false;
+  // }
+
+  // Currently the message header is parsed twice per packet, once by XiaomiListener::parse_device()
+  // and then again by the respective device class's parse_device() function. Parsing the header
+  // here and then for each device seems to be unneccessary and complicates the duplicate packet filtering.
+  // Hence I disabled the call to parse_xiaomi_header() here and the message parsing is done entirely
+  // in the respecive device instance. The XiaomiListener class is defined in __init__.py and cannot
+  // be removed entirely.
 
   return true;
 }

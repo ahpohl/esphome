@@ -23,31 +23,30 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   }
   ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
 
-  auto res = xiaomi_ble::parse_xiaomi_header(device);
-  if (!res.has_value()) {
-    return false;
+  for (auto &service_data : device.get_service_datas()) {
+    auto res = xiaomi_ble::parse_xiaomi_header(service_data);
+    if (!res.has_value()) {
+      return false;
+    }
+    if (res->is_duplicate) {
+      return false;
+    }
+    if (res->has_encryption) {
+      xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
+    }
+    if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
+      return false;
+    }
+    if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
+      return false;
+    }
+    if (res->temperature.has_value() && this->temperature_ != nullptr)
+      this->temperature_->publish_state(*res->temperature);
+    if (res->humidity.has_value() && this->humidity_ != nullptr)
+      this->humidity_->publish_state(*res->humidity);
+    if (res->battery_level.has_value() && this->battery_level_ != nullptr)
+      this->battery_level_->publish_state(*res->battery_level);
   }
-  if (res->is_duplicate) {
-    return false;
-  }
-
-  esp32_ble_tracker::ServiceData service_data = device.get_service_data();
-  if (res->has_encryption) {
-    xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
-  }
-  if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
-    return false;
-  }
-  if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
-    return false;
-  }
-
-  if (res->temperature.has_value() && this->temperature_ != nullptr)
-    this->temperature_->publish_state(*res->temperature);
-  if (res->humidity.has_value() && this->humidity_ != nullptr)
-    this->humidity_->publish_state(*res->humidity);
-  if (res->battery_level.has_value() && this->battery_level_ != nullptr)
-    this->battery_level_->publish_state(*res->battery_level);
 
   return true;
 }
