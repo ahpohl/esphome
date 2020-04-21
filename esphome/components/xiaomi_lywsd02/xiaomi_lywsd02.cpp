@@ -21,27 +21,33 @@ bool XiaomiLYWSD02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   }
   ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
 
+  bool success = false;
   for (auto &service_data : device.get_service_datas()) {
     auto res = xiaomi_ble::parse_xiaomi_header(service_data);
     if (!res.has_value()) {
-      return false;
+      continue;
     }
     if (res->is_duplicate) {
-      return false;
+      continue;
     }
     if (res->has_encryption) {
       ESP_LOGVV(TAG, "parse_device(): payload decryption is currently not supported on this device.");
     }
     if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
-      return false;
+      continue;
     }
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
-      return false;
+      continue;
     }
     if (res->temperature.has_value() && this->temperature_ != nullptr)
       this->temperature_->publish_state(*res->temperature);
     if (res->humidity.has_value() && this->humidity_ != nullptr)
       this->humidity_->publish_state(*res->humidity);
+    success = true;
+  }
+
+  if (!success) {
+    return false;
   }
 
   return true;
