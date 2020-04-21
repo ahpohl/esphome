@@ -18,21 +18,10 @@ void XiaomiLYWSD03MMC::dump_config() {
 
 bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
-    ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
+    ESP_LOGVV(TAG, "XiaomiLYWSD03MMC::parse_device(): unknown MAC address.");
     return false;
   }
   for (auto &service_data : device.get_service_datas()) {
-    if (!(service_data.data[0] & 0x40)) {
-      ESP_LOGVV(TAG, "parse_device(): service data has no DATA flag.");
-      return false;
-    }
-    static uint8_t last_frame_count = 0;
-    if ((service_data.data[0] & 0x20) && (last_frame_count == service_data.data[4])) {
-      ESP_LOGD(TAG, "parse_xiaomi_service_data(): duplicate data packet received (%d).", last_frame_count);
-      ESP_LOGD(TAG, "  Packet : %s", hexencode(service_data.data.data(), service_data.data.size()).c_str());
-      last_frame_count = service_data.data[4];
-      return false;
-    }
     if (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_))) {
       return false;
     }
@@ -40,7 +29,6 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
 
   auto res = xiaomi_ble::parse_xiaomi(device);
   if (!res.has_value()) {
-    ESP_LOGVV(TAG, "parse_device(): message contains no results.");
     return false;
   }
 
