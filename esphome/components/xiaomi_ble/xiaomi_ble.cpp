@@ -16,7 +16,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   result.has_encryption = (message[0] & 0x08) ? true : false;  // update encryption status
   if (result.has_encryption) {
     ESP_LOGVV(TAG, "parse_xiaomi_message(): payload is encrypted, stop reading message.");
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(message.data(), message.size()).c_str());
     return false;
   }
 
@@ -92,10 +91,8 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   return true;
 }
 
-optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDevice &device) {
+optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ServiceData &service_data) {
   XiaomiParseResult result;
-
-  esp32_ble_tracker::ServiceData service_data = device.get_service_data();
   if (!service_data.uuid.contains(0x95, 0xFE)) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no service data UUID magic bytes.");
     return {};
@@ -110,6 +107,15 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
     ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has no DATA flag.");
     return {};
   }
+
+  static uint8_t last_frame_count = 0;
+  if (last_frame_count == raw[4]) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): duplicate data packet received (%d).", static_cast<int>(last_frame_count));
+    result.is_duplicate = true;
+    return {};
+  }
+  last_frame_count = raw[4];
+  result.is_duplicate = false;
 
   bool is_lywsdcgq = (raw[1] & 0x20) == 0x20 && raw[2] == 0xAA && raw[3] == 0x01;
   bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
@@ -213,16 +219,17 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   raw[0] &= ~0x08;
 
   ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
-  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data() + 11, vector.datasize).c_str());
+  ESP_LOGVV(TAG, "  Plaintext : %s, Packet : %d", hexencode(raw.data() + 11, vector.datasize).c_str(),
+            static_cast<int>(raw[4]));
 
   mbedtls_ccm_free(&ctx);
   return true;
 }
 
-void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
+bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
   if (!result.has_value()) {
     ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");
-    return;
+    return false;
   }
 
   const char *name = "HHCCJCY01";
@@ -256,20 +263,17 @@ void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
   }
+
+  return true;
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
-  auto res = parse_xiaomi_header(device);
-  if (!res.has_value()) {
-    return false;
-  }
-
-  // Result reporting moved to separate function, because the message has not been parsed yet
-  // and the results are not available yet. The xiaomi logic seems broken as the header and message needs
-  // to be parsed multiple times, once here and then again for each configured xiaomi device.
-  // The bindkey is only available in class XiaomiLYWSD03MMC and hence the message cannot be
-  // parsed here.
-
+  // Previously the message was parsed twice per packet, once by XiaomiListener::parse_device()
+  // and then again by the respective device class's parse_device() function. Parsing the header
+  // here and then for each device seems to be unneccessary and complicates the duplicate packet filtering.
+  // Hence I disabled the call to parse_xiaomi_header() here and the message parsing is done entirely
+  // in the respecive device instance. The XiaomiListener class is defined in __init__.py and I was not
+  // able to remove it entirely.
   return true;
 }
 

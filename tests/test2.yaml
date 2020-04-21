@@ -111,11 +111,11 @@ sensor:
     mac_address: "A4:C1:38:4E:16:78"
     bindkey: "e9efaa6873f9f9c87a5e75a5f814801c"
     temperature:
-      name: "Temperature"
+      name: "Xiaomi LYWSD03MMC Temperature"
     humidity:
-      name: "Humidity"
+      name: "Xiaomi LYWSD03MMC Humidity"
     battery_level:
-      name: "Battery Level"
+      name: "Xiaomi LYWSD03MMC Battery Level"
   - platform: pmsx003
     type: PMSX003
     pm_1_0:
