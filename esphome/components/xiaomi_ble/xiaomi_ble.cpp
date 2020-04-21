@@ -2,13 +2,10 @@
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
 
-#include <vector>
-#include <algorithm>
-#include <string.h>
-#include <mbedtls/ccm.h>
-#include <mbedtls/error.h>
-
 #ifdef ARDUINO_ARCH_ESP32
+
+#include <vector>
+#include "mbedtls/ccm.h"
 
 namespace esphome {
 namespace xiaomi_ble {
@@ -16,6 +13,12 @@ namespace xiaomi_ble {
 static const char *TAG = "xiaomi_ble";
 
 bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult &result) {
+  result.has_encryption = (message[0] & 0x08) ? true : false;  // update encryption status
+  if (result.has_encryption) {
+    ESP_LOGVV(TAG, "parse_xiaomi_message(): payload is encrypted, stop reading message.");
+    ESP_LOGVV(TAG, "  Packet : %s", hexencode(message.data(), message.size()).c_str());
+    return false;
+  }
 
   // Data point specs
   // Byte 0: type
@@ -28,8 +31,8 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   const uint8_t data_length = raw[2];
 
   if ((data_length < 1) || (data_length > 4)) {
-     ESP_LOGVV(TAG, "parse_xiaomi_message(): payload has wrong size (%d)!", data_length);
-     return false;
+    ESP_LOGVV(TAG, "parse_xiaomi_message(): payload has wrong size (%d)!", data_length);
+    return false;
   }
 
   switch (raw[0]) {
@@ -40,53 +43,53 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
       result.temperature = temperature / 10.0f;
       result.humidity = humidity / 10.0f;
-      return true;
+      break;
     }
     case 0x0A: {  // battery, 1 byte, 8-bit unsigned integer, 1 %
       if (data_length != 1)
         return false;
       result.battery_level = data[0];
-      return true;
+      break;
     }
     case 0x06: {  // humidity, 2 bytes, 16-bit signed integer (LE), 0.1 %
       if (data_length != 2)
         return false;
       const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
       result.humidity = humidity / 10.0f;
-      return true;
+      break;
     }
     case 0x04: {  // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
       if (data_length != 2)
         return false;
       const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
       result.temperature = temperature / 10.0f;
-      return true;
+      break;
     }
     case 0x09: {  // conductivity, 2 bytes, 16-bit unsigned integer (LE), 1 µS/cm
       if (data_length != 2)
         return false;
       const uint16_t conductivity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
       result.conductivity = conductivity;
-      return true;
+      break;
     }
     case 0x07: {  // illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
       if (data_length != 3)
         return false;
       const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
       result.illuminance = illuminance;
-      return true;
+      break;
     }
     case 0x08: {  // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
       if (data_length != 1)
         return false;
       result.moisture = data[0];
-      return true;
+      break;
     }
     default:
       return false;
   }
 
-  return false;
+  return true;
 }
 
 optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -103,8 +106,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::ESPBTDe
   result.has_capability = (raw[0] & 0x20) ? true : false;
   result.has_encryption = (raw[0] & 0x08) ? true : false;
 
-  if (result.has_capability) {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has capability flag.");
+  if (!result.has_data) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): service data has no DATA flag.");
     return {};
   }
 
@@ -142,17 +145,17 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
     return false;
   }
 
-  XiaomiAESVector vector {.key = {0},
-                          .plaintext = {0},
-                          .ciphertext = {0},
-                          .authdata = {0x11},
-                          .iv = {0},
-                          .tag = {0},
-                          .keysize = 16,
-                          .authsize = 1,
-                          .datasize = 4,  // battery
-                          .tagsize = 4,
-                          .ivsize = 12};
+  XiaomiAESVector vector{.key = {0},
+                         .plaintext = {0},
+                         .ciphertext = {0},
+                         .authdata = {0x11},
+                         .iv = {0},
+                         .tag = {0},
+                         .keysize = 16,
+                         .authsize = 1,
+                         .datasize = 4,  // battery
+                         .tagsize = 4,
+                         .ivsize = 12};
 
   int offset = 0;
   if (raw.size() == 23) {
@@ -173,9 +176,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
 
   int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, vector.key, vector.keysize * 8);
   if (ret) {
-    char err[100] = {0};
-    mbedtls_strerror(ret, err, 99);
-    ESP_LOGD(TAG, "%s.", err);
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): mbedtls_ccm_setkey() failed.");
     mbedtls_ccm_free(&ctx);
     return false;
   }
@@ -212,10 +213,49 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   raw[0] &= ~0x08;
 
   ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
-  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data()+11, vector.datasize).c_str());
+  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data() + 11, vector.datasize).c_str());
 
   mbedtls_ccm_free(&ctx);
   return true;
+}
+
+void report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
+  if (!result.has_value()) {
+    ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");
+    return;
+  }
+
+  const char *name = "HHCCJCY01";
+  if (result->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
+    name = "LYWSDCGQ";
+  } else if (result->type == XiaomiParseResult::TYPE_LYWSD02) {
+    name = "LYWSD02";
+  } else if (result->type == XiaomiParseResult::TYPE_CGG1) {
+    name = "CGG1";
+  } else if (result->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
+    name = "LYWSD03MMC";
+  }
+
+  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());
+
+  if (result->temperature.has_value()) {
+    ESP_LOGD(TAG, "  Temperature: %.1f°C", *result->temperature);
+  }
+  if (result->humidity.has_value()) {
+    ESP_LOGD(TAG, "  Humidity: %.1f%%", *result->humidity);
+  }
+  if (result->battery_level.has_value()) {
+    ESP_LOGD(TAG, "  Battery Level: %.0f%%", *result->battery_level);
+  }
+  if (result->conductivity.has_value()) {
+    ESP_LOGD(TAG, "  Conductivity: %.0fµS/cm", *result->conductivity);
+  }
+  if (result->illuminance.has_value()) {
+    ESP_LOGD(TAG, "  Illuminance: %.0flx", *result->illuminance);
+  }
+  if (result->moisture.has_value()) {
+    ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
+  }
 }
 
 bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -224,38 +264,11 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
     return false;
   }
 
-  const char *name = "HHCCJCY01";
-  if (res->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
-    name = "LYWSDCGQ";
-  } else if (res->type == XiaomiParseResult::TYPE_LYWSD02) {
-    name = "LYWSD02";
-  } else if (res->type == XiaomiParseResult::TYPE_CGG1) {
-    name = "CGG1";
-  } else if (res->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
-    name = "LYWSD03MMC";
-  }
-
-  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, device.address_str().c_str());
-
-  if (res->temperature.has_value()) {
-    ESP_LOGD(TAG, "  Temperature: %.1f°C", *res->temperature);
-  }
-  if (res->humidity.has_value()) {
-    ESP_LOGD(TAG, "  Humidity: %.1f%%", *res->humidity);
-  }
-  if (res->battery_level.has_value()) {
-    ESP_LOGD(TAG, "  Battery Level: %.0f%%", *res->battery_level);
-  }
-  if (res->conductivity.has_value()) {
-    ESP_LOGD(TAG, "  Conductivity: %.0fµS/cm", *res->conductivity);
-  }
-  if (res->illuminance.has_value()) {
-    ESP_LOGD(TAG, "  Illuminance: %.0flx", *res->illuminance);
-  }
-  if (res->moisture.has_value()) {
-    ESP_LOGD(TAG, "  Moisture: %.0f%%", *res->moisture);
-  }
-
+  // Result reporting moved to separate function, because the message has not been parsed yet
+  // and the results are not available yet. The xiaomi logic seems broken as the header and message needs
+  // to be parsed multiple times, once here and then again for each configured xiaomi device.
+  // The bindkey is only available in class XiaomiLYWSD03MMC and hence the message cannot be
+  // parsed here.
 
   return true;
 }
