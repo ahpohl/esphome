@@ -35,6 +35,7 @@ bool XiaomiHHCCJCY01::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
     }
     if (res->has_encryption) {
       ESP_LOGVV(TAG, "parse_device(): payload decryption is currently not supported on this device.");
+      continue:
     }
     if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
       continue;
