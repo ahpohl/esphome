@@ -216,8 +216,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   raw[0] &= ~0x08;
 
   ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
-  ESP_LOGVV(TAG, "  Plaintext : %s, Packet (%d)", hexencode(raw.data() + 11, vector.datasize).c_str(),
-            static_cast<int>(raw[4]));
+  ESP_LOGVV(TAG, "  Plaintext : %s", hexencode(raw.data() + 11, vector.datasize).c_str());
 
   mbedtls_ccm_free(&ctx);
   return true;
