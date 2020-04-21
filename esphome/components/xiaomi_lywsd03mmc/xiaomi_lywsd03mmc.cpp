@@ -32,8 +32,8 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     if (res->is_duplicate) {
       continue;
     }
-    if (res->has_encryption &&
-      (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_)))) {
+    if (res->has_encryption && (!(xiaomi_ble::decrypt_xiaomi_payload(
+                                   const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_)))) {
       continue;
     }
     if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
