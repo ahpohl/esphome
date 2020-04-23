@@ -274,7 +274,8 @@ bool XiaomiListener::parse_device(const esp32_ble_tracker::ESPBTDevice &device) 
   // Hence I disabled the call to parse_xiaomi_header() here and the message parsing is done entirely
   // in the respecive device instance. The XiaomiListener class is defined in __init__.py and I was not
   // able to remove it entirely.
-  return true;
+
+  return false;  // with true it's not showing device scans
 }
 
 }  // namespace xiaomi_ble
