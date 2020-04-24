@@ -206,7 +206,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
     ESP_LOGVV(TAG, "       Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
     ESP_LOGVV(TAG, "          Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
     mbedtls_ccm_free(&ctx);
-    reovourn false;
+    return false;
   }
 
   // replace encrypted payload with plaintext
