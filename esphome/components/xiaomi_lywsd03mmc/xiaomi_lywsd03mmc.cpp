@@ -12,10 +12,6 @@ void XiaomiLYWSD03MMC::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi LYWSD03MMC");
   ESP_LOGCONFIG(TAG, "  Bindkey: %s", hexencode(this->bindkey_, 16).c_str());
   ESP_LOGCONFIG(TAG, "  Provision: %s", this->provision_ ? "yes" : "no");
-  if (this->provision_) {
-    xiaomi_ble::generate_key(this->bindkey_);
-    ESP_LOGCONFIG(TAG, "  New bindkey: %s", hexencode(this->bindkey_, 16).c_str());
-  }
   LOG_SENSOR("  ", "Temperature", this->temperature_);
   LOG_SENSOR("  ", "Humidity", this->humidity_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
@@ -27,6 +23,13 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     return false;
   }
   ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
+
+  if (this->provision_) {
+    xiaomi_ble::generate_key(this->bindkey_);
+    ESP_LOGD(TAG, "Provisioning %s with bindkey %s", device.address_str().c_str(),
+             hexencode(this->bindkey_, 16).c_str());
+    this->provision_ = false;
+  }
 
   bool success = false;
   for (auto &service_data : device.get_service_datas()) {

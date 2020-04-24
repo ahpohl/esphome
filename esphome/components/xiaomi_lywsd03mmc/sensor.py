@@ -31,7 +31,9 @@ def to_code(config):
 
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
     cg.add(var.set_bindkey(config[CONF_BINDKEY].as_raw))
-    cg.add(var.set_provision(config[CONF_PROVISION]))
+    
+    if CONF_PROVISION in config:
+        cg.add(var.set_provision(config[CONF_PROVISION]))
 
     if CONF_TEMPERATURE in config:
         sens = yield sensor.new_sensor(config[CONF_TEMPERATURE])

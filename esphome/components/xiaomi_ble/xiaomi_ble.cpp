@@ -202,11 +202,11 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
 
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
     ESP_LOGVV(TAG, "  MAC address : %s", hexencode(mac_address, 6).c_str());
-    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
-    ESP_LOGVV(TAG, "  Key : %s", hexencode(vector.key, vector.keysize).c_str());
-    ESP_LOGVV(TAG, "  Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
-    ESP_LOGVV(TAG, "  Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
-    ESP_LOGVV(TAG, "  Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
+    ESP_LOGVV(TAG, "       Packet : %s", hexencode(raw.data(), raw.size()).c_str());
+    ESP_LOGVV(TAG, "          Key : %s", hexencode(vector.key, vector.keysize).c_str());
+    ESP_LOGVV(TAG, "           Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
+    ESP_LOGVV(TAG, "       Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
+    ESP_LOGVV(TAG, "          Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
     mbedtls_ccm_free(&ctx);
     return false;
   }
