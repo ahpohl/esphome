@@ -236,7 +236,7 @@ bool generate_xiaomi_bindkey(uint8_t *key) {
   char random_seed[] = "aes generate key";
 
   int ret =
-      mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (uint8_t*) random_seed, strlen(random_seed));
+      mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (uint8_t *) random_seed, strlen(random_seed));
   if (ret) {
     ESP_LOGVV(TAG, "mbedtls_ctr_drbg_init() returned -0x%04x\n", -ret);
     return false;
