@@ -25,7 +25,7 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
 
   if (this->provision_) {
-    xiaomi_ble::generate_key(this->bindkey_);
+    xiaomi_ble::generate_xiaomi_bindkey(this->bindkey_);
     ESP_LOGD(TAG, "Provisioning %s with bindkey %s", device.address_str().c_str(),
              hexencode(this->bindkey_, 16).c_str());
     this->provision_ = false;
