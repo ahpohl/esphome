@@ -11,6 +11,11 @@ static const char *TAG = "xiaomi_lywsd03mmc";
 void XiaomiLYWSD03MMC::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi LYWSD03MMC");
   ESP_LOGCONFIG(TAG, "  Bindkey: %s", hexencode(this->bindkey_, 16).c_str());
+  ESP_LOGCONFIG(TAG, "  Provision: %s", this->provision_ ? "yes" : "no");
+  if (this->provision_) {
+    xiaomi_ble::generate_key(this->bindkey_);
+    ESP_LOGCONFIG(TAG, "  New bindkey: %s", hexencode(this->bindkey_, 16).c_str());
+  }
   LOG_SENSOR("  ", "Temperature", this->temperature_);
   LOG_SENSOR("  ", "Humidity", this->humidity_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
@@ -58,11 +63,11 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
   return true;
 }
 
-void XiaomiLYWSD03MMC::set_bindkey(const std::string &t_bindkey) {
-  if (t_bindkey.size() != 16) {
+void XiaomiLYWSD03MMC::set_bindkey(const std::string &bindkey) {
+  if (bindkey.size() != 16) {
     return;
   }
-  memcpy(bindkey_, t_bindkey.c_str(), t_bindkey.size());
+  memcpy(bindkey_, bindkey.c_str(), bindkey.size());
 }
 
 }  // namespace xiaomi_lywsd03mmc
