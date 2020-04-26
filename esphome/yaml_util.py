@@ -11,8 +11,7 @@ import yaml.constructor
 
 from esphome import core
 from esphome.config_helpers import read_config_file
-from esphome.core import EsphomeError, IPAddress, Lambda, MACAddress, TimePeriod, DocumentRange, \
-    BindKey
+from esphome.core import EsphomeError, IPAddress, Lambda, MACAddress, TimePeriod, DocumentRange
 from esphome.helpers import add_class_to_obj
 from esphome.util import OrderedDict, filter_yaml_files
 
@@ -417,7 +416,6 @@ ESPHomeDumper.add_multi_representer(int, ESPHomeDumper.represent_int)
 ESPHomeDumper.add_multi_representer(float, ESPHomeDumper.represent_float)
 ESPHomeDumper.add_multi_representer(IPAddress, ESPHomeDumper.represent_stringify)
 ESPHomeDumper.add_multi_representer(MACAddress, ESPHomeDumper.represent_stringify)
-ESPHomeDumper.add_multi_representer(BindKey, ESPHomeDumper.represent_stringify)
 ESPHomeDumper.add_multi_representer(TimePeriod, ESPHomeDumper.represent_stringify)
 ESPHomeDumper.add_multi_representer(Lambda, ESPHomeDumper.represent_lambda)
 ESPHomeDumper.add_multi_representer(core.ID, ESPHomeDumper.represent_id)

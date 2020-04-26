@@ -29,7 +29,7 @@ def to_code(config):
     yield esp32_ble_tracker.register_ble_device(var, config)
 
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
-    cg.add(var.set_bindkey(str(config[CONF_BINDKEY])))
+    cg.add(var.set_bindkey(config[CONF_BINDKEY]))
 
     if CONF_TEMPERATURE in config:
         sens = yield sensor.new_sensor(config[CONF_TEMPERATURE])

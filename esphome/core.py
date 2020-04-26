@@ -56,14 +56,6 @@ class MACAddress:
         return RawExpression(f'0x{num}ULL')
 
 
-class BindKey:
-    def __init__(self, *parts):
-        self.parts = parts
-
-    def __str__(self):
-        return ''.join(f'{part:02X}' for part in self.parts)
-
-
 def is_approximately_integer(value):
     if isinstance(value, int):
         return True
