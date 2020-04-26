@@ -6,7 +6,6 @@ import logging
 import math
 import os
 import re
-import binascii
 
 # pylint: disable=unused-import, wrong-import-order
 from typing import Any, Dict, List, Optional, Set  # noqa
@@ -63,12 +62,6 @@ class BindKey:
 
     def __str__(self):
         return ''.join(f'{part:02X}' for part in self.parts)
-
-    @property
-    def as_raw(self):
-        from esphome.cpp_generator import StringLiteral
-
-        return StringLiteral(binascii.a2b_hex(self.__str__()))
 
 
 def is_approximately_integer(value):
