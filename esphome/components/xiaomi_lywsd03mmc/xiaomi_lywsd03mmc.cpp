@@ -68,7 +68,6 @@ void XiaomiLYWSD03MMC::set_bindkey(const std::string &bindkey) {
     strncpy(temp, &(bindkey.c_str()[i * 2]), 2);
     bindkey_[i] = std::strtoul(temp, NULL, 16);
   }
-  // ESP_LOGCONFIG(TAG, "Bindkey: %s (%d)", bindkey.c_str(), bindkey.size());
 }
 
 }  // namespace xiaomi_lywsd03mmc
