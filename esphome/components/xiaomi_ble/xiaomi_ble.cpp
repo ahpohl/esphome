@@ -228,28 +228,6 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   return true;
 }
 
-bool generate_xiaomi_bindkey(uint8_t *key) {
-  mbedtls_ctr_drbg_context ctr_drbg;
-  mbedtls_ctr_drbg_init(&ctr_drbg);
-  mbedtls_entropy_context entropy;
-  mbedtls_entropy_init(&entropy);
-  char random_seed[] = "aes generate key";
-
-  int ret =
-      mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (uint8_t *) random_seed, strlen(random_seed));
-  if (ret) {
-    ESP_LOGVV(TAG, "mbedtls_ctr_drbg_init() returned -0x%04x\n", -ret);
-    return false;
-  }
-  ret = mbedtls_ctr_drbg_random(&ctr_drbg, key, 16);
-  if (ret) {
-    ESP_LOGVV(TAG, "mbedtls_ctr_drbg_random() returned -0x%04x\n", -ret);
-    return false;
-  }
-
-  return true;
-}
-
 bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
   if (!result.has_value()) {
     ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");
