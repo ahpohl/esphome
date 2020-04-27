@@ -45,7 +45,7 @@ bool XiaomiProvision::generate_xiaomi_bindkey(void) {
     return false;
   }
 
-  ESP_LOGVV(TAG, "generate_xiaomi_bindkey(): bindkey %s", hexencode(this->bindkey_, 16).c_str());
+  ESP_LOGVV(TAG, "generate_xiaomi_bindkey(): %s", hexencode(this->bindkey_, 16).c_str());
 
   return true;
 }
