@@ -1,9 +1,10 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import esp32_ble_tracker
+from esphome.components import sensor, esp32_ble_tracker
 from esphome.const import CONF_MAC_ADDRESS, CONF_ID
 
 DEPENDENCIES = ['esp32_ble_tracker']
+AUTO_LOAD = ['xiaomi_ble']
 
 xiaomi_provision_ns = cg.esphome_ns.namespace('xiaomi_provision')
 XiaomiProvision = xiaomi_provision_ns.class_('XiaomiProvision', esp32_ble_tracker.ESPBTDeviceListener,

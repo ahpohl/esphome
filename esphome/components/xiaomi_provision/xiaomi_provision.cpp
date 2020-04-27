@@ -3,6 +3,9 @@
 
 #ifdef ARDUINO_ARCH_ESP32
 
+#include "mbedtls/entropy.h"
+#include "mbedtls/ctr_drbg.h"
+
 namespace esphome {
 namespace xiaomi_provision {
 
@@ -10,7 +13,6 @@ static const char *TAG = "xiaomi_provision";
 
 void XiaomiProvision::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi Provision");
-  ESP_LOGCONFIG(TAG, "  MAC Address:");
 }
 
 bool XiaomiProvision::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -19,11 +21,12 @@ bool XiaomiProvision::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
     return false;
   }
   ESP_LOGVV(TAG, "parse_device(): MAC address %s found.", device.address_str().c_str());
+  generate_xiaomi_bindkey();
 
   return true;
 }
 
-bool generate_xiaomi_bindkey(void) {
+bool XiaomiProvision::generate_xiaomi_bindkey(void) {
   mbedtls_ctr_drbg_context ctr_drbg;
   mbedtls_ctr_drbg_init(&ctr_drbg);
   mbedtls_entropy_context entropy;
@@ -41,6 +44,8 @@ bool generate_xiaomi_bindkey(void) {
     ESP_LOGVV(TAG, "mbedtls_ctr_drbg_random() returned -0x%04x\n", -ret);
     return false;
   }
+
+  ESP_LOGVV(TAG, "generate_xiaomi_bindkey(): bindkey %s", hexencode(this->bindkey_, 16).c_str());
 
   return true;
 }

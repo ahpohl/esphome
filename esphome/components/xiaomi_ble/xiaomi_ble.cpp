@@ -6,8 +6,6 @@
 
 #include <vector>
 #include "mbedtls/ccm.h"
-#include "mbedtls/entropy.h"
-#include "mbedtls/ctr_drbg.h"
 
 namespace esphome {
 namespace xiaomi_ble {

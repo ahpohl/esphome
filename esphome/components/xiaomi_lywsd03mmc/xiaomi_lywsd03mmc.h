@@ -25,7 +25,6 @@ class XiaomiLYWSD03MMC : public Component, public esp32_ble_tracker::ESPBTDevice
  protected:
   uint64_t address_;
   uint8_t bindkey_[16];
-  bool provision_;
   sensor::Sensor *temperature_{nullptr};
   sensor::Sensor *humidity_{nullptr};
   sensor::Sensor *battery_level_{nullptr};
