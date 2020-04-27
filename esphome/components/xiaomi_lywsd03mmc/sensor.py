@@ -30,7 +30,7 @@ def to_code(config):
     yield esp32_ble_tracker.register_ble_device(var, config)
 
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
-    cg.add(var.set_bindkey(config[CONF_BINDKEY].as_raw))
+    cg.add(var.set_bindkey(config[CONF_BINDKEY]))
 
     if CONF_PROVISION in config:
         cg.add(var.set_provision(config[CONF_PROVISION]))

@@ -580,7 +580,7 @@ def bind_key(value):
         except ValueError:
             raise Invalid("Bind key must be hex values from 00 to FF")
 
-    return core.BindKey(*parts_int)
+    return ''.join(f'{part:02X}' for part in parts_int)
 
 
 def uuid(value):
