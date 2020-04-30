@@ -129,7 +129,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     return {};
   }
 
-  result.raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc ? 11 : 12;
+  result.raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc || is_cgd1 ? 11 : 12;
 
   result.type = XiaomiParseResult::TYPE_HHCCJCY01;
   if (is_lywsdcgq) {
@@ -244,6 +244,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
     name = "CGG1";
   } else if (result->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
     name = "LYWSD03MMC";
+  } else if (result->type == XiaomiParseResult::TYPE_CGD1) {
+    name = "CGD1";
   }
 
   ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());
