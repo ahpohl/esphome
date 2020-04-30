@@ -122,8 +122,9 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
   bool is_cgg1 = ((raw[1] & 0x30) == 0x30 || (raw[1] & 0x20) == 0x20) && raw[2] == 0x47 && raw[3] == 0x03;
   bool is_lywsd03mmc = (raw[1] & 0x58) == 0x58 && raw[2] == 0x5b && raw[3] == 0x05;
+  bool is_cgd1 = (raw[1] & 0x58) == 0x58 && raw[2] == 0x76 && raw[3] == 0x05;
 
-  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc) {
+  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc && !is_cgd1) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
     return {};
   }
@@ -139,6 +140,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     result.type = XiaomiParseResult::TYPE_CGG1;
   } else if (is_lywsd03mmc) {
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
+  } else if (is_cgd1) {
+    result.type = XiaomiParseResult::TYPE_CGD1;
   }
 
   return result;
