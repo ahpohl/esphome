@@ -103,6 +103,14 @@ sensor:
       name: "Xiaomi CGG1 Humidity"
     battery_level:
       name: "Xiaomi CGG1 Battery Level"
+  - platform: xiaomi_cgd1
+    mac_address: A4:C1:38:D1:61:7D
+    temperature:
+      name: "Xiaomi CGD1 Temperature"
+    humidity:
+      name: "Xiaomi CGD1 Humidity"
+    battery_level:
+      name: "Xiaomi CGD1 Battery Level"
   - platform: xiaomi_lywsd03mmc
     mac_address: "A4:C1:38:4E:16:78"
     bindkey: "e9efaa6873f9f9c87a5e75a5f814801c"
