@@ -84,6 +84,19 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.moisture = data[0];
       break;
     }
+    case 0x12: {  // state (on/off), 1 byte, 8-bit unsigned integer
+      if (data_length != 1)
+        return false;
+      result.state = data[0];
+      break;
+    }
+    case 0x13: {  // tablet, 1 byte, 8-bit unsigned integer, 1 %
+      if (data_length != 1)
+        return false;
+      result.tablet = data[0];
+      break;
+    }
+
     default:
       return false;
   }
@@ -123,13 +136,14 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   bool is_cgg1 = ((raw[1] & 0x30) == 0x30 || (raw[1] & 0x20) == 0x20) && raw[2] == 0x47 && raw[3] == 0x03;
   bool is_lywsd03mmc = (raw[1] & 0x58) == 0x58 && raw[2] == 0x5b && raw[3] == 0x05;
   bool is_cgd1 = (raw[1] & 0x58) == 0x58 && raw[2] == 0x76 && raw[3] == 0x05;
+  bool is_wx08zm = (raw[1] & 0x20) == 0x20 && raw[2] == 0x0a && raw[3] == 0x04;
 
-  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc && !is_cgd1) {
+  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc && !is_cgd1 && !is_wx08zm) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
     return {};
   }
 
-  result.raw_offset = is_lywsdcgq || is_cgg1 || is_lywsd03mmc || is_cgd1 ? 11 : 12;
+  result.raw_offset = is_hhccjcy01 || is_lywsd02 ? 12 : 11;
 
   result.type = XiaomiParseResult::TYPE_HHCCJCY01;
   if (is_lywsdcgq) {
@@ -142,6 +156,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
   } else if (is_cgd1) {
     result.type = XiaomiParseResult::TYPE_CGD1;
+  } else if (is_wx08zm) {
+    result.type = XiaomiParseResult::TYPE_WX08ZM;
   }
 
   return result;
@@ -246,6 +262,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
     name = "LYWSD03MMC";
   } else if (result->type == XiaomiParseResult::TYPE_CGD1) {
     name = "CGD1";
+  } else if (result->type == XiaomiParseResult::TYPE_WX08ZM) {
+    name = "WX08ZM";
   }
 
   ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());
@@ -267,6 +285,12 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   }
   if (result->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
+  }
+  if (result->tablet.has_value()) {
+    ESP_LOGD(TAG, "  Tablet: %.0f%%", *result->tablet);
+  }
+  if (result->state.has_value()) {
+    ESP_LOGD(TAG, "  State: %.0f", *result->state);
   }
 
   return true;
