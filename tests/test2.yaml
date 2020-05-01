@@ -121,6 +121,14 @@ sensor:
       name: "Xiaomi LYWSD03MMC Humidity"
     battery_level:
       name: "Xiaomi LYWSD03MMC Battery Level"
+  - platform: xiaomi_wx08zm
+    mac_address: "74:A3:4A:B5:07:34"
+    tablet:
+      name: "WX08ZM Tablet"
+    state:
+      name: "WX08ZM State"
+    battery_level:
+      name: "WX08ZM Battery Level"
   - platform: pmsx003
     type: PMSX003
     pm_1_0:
