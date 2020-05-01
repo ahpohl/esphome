@@ -130,13 +130,13 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   last_frame_count = raw[4];
   result.is_duplicate = false;
 
-  bool is_lywsdcgq = (raw[1] & 0x20) == 0x20 && raw[2] == 0xAA && raw[3] == 0x01;
-  bool is_hhccjcy01 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x98 && raw[3] == 0x00;
-  bool is_lywsd02 = (raw[1] & 0x20) == 0x20 && raw[2] == 0x5b && raw[3] == 0x04;
-  bool is_cgg1 = ((raw[1] & 0x30) == 0x30 || (raw[1] & 0x20) == 0x20) && raw[2] == 0x47 && raw[3] == 0x03;
-  bool is_lywsd03mmc = (raw[1] == 0x58) && (raw[2] == 0x5b) && (raw[3] == 0x05);
-  bool is_cgd1 = (raw[1] == 0x58) && (raw[2] == 0x76) && (raw[3] == 0x05);
-  bool is_wx08zm = (raw[1] == 0x20) && (raw[2] == 0x0a) && (raw[3] == 0x04);
+  bool is_hhccjcy01 = (raw[2] == 0x98) && (raw[3] == 0x00);
+  bool is_lywsdcgq = (raw[2] == 0xAA) && (raw[3] == 0x01);
+  bool is_cgg1 = (raw[2] == 0x47) && (raw[3] == 0x03);
+  bool is_lywsd02 = (raw[2] == 0x5b) && (raw[3] == 0x04);
+  bool is_wx08zm = (raw[2] == 0x0a) && (raw[3] == 0x04);
+  bool is_lywsd03mmc = (raw[2] == 0x5b) && (raw[3] == 0x05);
+  bool is_cgd1 = (raw[2] == 0x76) && (raw[3] == 0x05);
 
   if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc && !is_cgd1 && !is_wx08zm) {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
