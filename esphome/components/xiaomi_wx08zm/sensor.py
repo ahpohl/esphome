@@ -2,7 +2,7 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, esp32_ble_tracker
 from esphome.const import CONF_BATTERY_LEVEL, CONF_MAC_ADDRESS, CONF_TABLET, CONF_STATE, \
-    UNIT_PERCENT, UNIT_EMPTY, ICON_EMPTY, ICON_BATTERY, CONF_ID
+    UNIT_PERCENT, UNIT_EMPTY, ICON_BUG, ICON_LIGHTBULB, ICON_BATTERY, CONF_ID
     
 
 DEPENDENCIES = ['esp32_ble_tracker']
@@ -15,8 +15,8 @@ XiaomiWX08ZM = xiaomi_wx08zm_ns.class_('XiaomiWX08ZM', esp32_ble_tracker.ESPBTDe
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(XiaomiWX08ZM),
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
-    cv.Optional(CONF_TABLET): sensor.sensor_schema(UNIT_PERCENT, ICON_EMPTY, 0),
-    cv.Optional(CONF_STATE): sensor.sensor_schema(UNIT_EMPTY, ICON_EMPTY, 0),
+    cv.Optional(CONF_TABLET): sensor.sensor_schema(UNIT_PERCENT, ICON_BUG, 0),
+    cv.Optional(CONF_STATE): sensor.sensor_schema(UNIT_EMPTY, ICON_LIGHTBULB, 0),
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(UNIT_PERCENT, ICON_BATTERY, 0),
 }).extend(esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA).extend(cv.COMPONENT_SCHEMA)
 
