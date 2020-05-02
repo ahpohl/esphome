@@ -129,27 +129,35 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   }
   last_frame_count = raw[4];
   result.is_duplicate = false;
-  result.raw_offset = 11;
 
-  if ((raw[2] == 0x98) && (raw[3] == 0x00)) {  // MiFlora
-    result.type = XiaomiParseResult::TYPE_HHCCJCY01;
-  } else if ((raw[2] == 0xaa) && (raw[3] == 0x01)) {  // round body, segment LCD
-    result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
-    result.raw_offset = 12;
-  } else if ((raw[2] == 0x5b) && (raw[3] == 0x04)) {  // rectangular body, e-ink display
-    result.type = XiaomiParseResult::TYPE_LYWSD02;
-    result.raw_offset = 12;
-  } else if ((raw[2] == 0x76) && (raw[3] == 0x05)) {  // round body, e-ink display
-    result.type = XiaomiParseResult::TYPE_CGG1;
-  } else if ((raw[2] == 0x5b) && (raw[3] == 0x05)) {  // small square body, segment LCD, encrypted
-    result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
-  } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // Cleargrass (Qingping) alarm clock, segment LCD
-    result.type = XiaomiParseResult::TYPE_CGD1;
-  } else if ((raw[2] == 0x0a) && (raw[3] == 0x04)) {  // Mosquito Repellent Smart Version (Model WX08ZM)
-    result.type = XiaomiParseResult::TYPE_MJMRV1;
-  } else {
-    ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
+  bool is_hhccjcy01 = (raw[2] == 0x98) && (raw[3] == 0x00);
+  bool is_lywsdcgq = (raw[2] == 0xAA) && (raw[3] == 0x01);
+  bool is_cgg1 = (raw[2] == 0x47) && (raw[3] == 0x03);
+  bool is_lywsd02 = (raw[2] == 0x5b) && (raw[3] == 0x04);
+  bool is_wx08zm = (raw[2] == 0x0a) && (raw[3] == 0x04);
+  bool is_lywsd03mmc = (raw[2] == 0x5b) && (raw[3] == 0x05);
+  bool is_cgd1 = (raw[2] == 0x76) && (raw[3] == 0x05);
+
+  if (!is_lywsdcgq && !is_hhccjcy01 && !is_lywsd02 && !is_cgg1 && !is_lywsd03mmc && !is_cgd1 && !is_wx08zm) {
+    ESP_LOGVV(TAG, "parse_xiaomi_header(): no magic bytes.");
     return {};
+  }
+
+  result.raw_offset = is_hhccjcy01 || is_lywsd02 ? 12 : 11;
+
+  result.type = XiaomiParseResult::TYPE_HHCCJCY01;
+  if (is_lywsdcgq) {
+    result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
+  } else if (is_lywsd02) {
+    result.type = XiaomiParseResult::TYPE_LYWSD02;
+  } else if (is_cgg1) {
+    result.type = XiaomiParseResult::TYPE_CGG1;
+  } else if (is_lywsd03mmc) {
+    result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
+  } else if (is_cgd1) {
+    result.type = XiaomiParseResult::TYPE_CGD1;
+  } else if (is_wx08zm) {
+    result.type = XiaomiParseResult::TYPE_WX08ZM;
   }
 
   return result;
@@ -254,8 +262,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
     name = "LYWSD03MMC";
   } else if (result->type == XiaomiParseResult::TYPE_CGD1) {
     name = "CGD1";
-  } else if (result->type == XiaomiParseResult::TYPE_MJMRV1) {
-    name = "MJ_MR_V1";
+  } else if (result->type == XiaomiParseResult::TYPE_WX08ZM) {
+    name = "WX08ZM";
   }
 
   ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());

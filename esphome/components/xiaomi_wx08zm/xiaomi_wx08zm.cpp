@@ -1,21 +1,21 @@
-#include "xiaomi_mjmrv1.h"
+#include "xiaomi_wx08zm.h"
 #include "esphome/core/log.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
 namespace esphome {
-namespace xiaomi_mjmrv1 {
+namespace xiaomi_wx08zm {
 
-static const char *TAG = "xiaomi_mjmrv1";
+static const char *TAG = "xiaomi_wx08zm";
 
-void XiaomiMJMRV1::dump_config() {
-  ESP_LOGCONFIG(TAG, "Xiaomi MJ_MR_V1");
+void XiaomiWX08ZM::dump_config() {
+  ESP_LOGCONFIG(TAG, "Xiaomi WX08ZM");
   LOG_SENSOR("  ", "Tablet", this->tablet_);
   LOG_SENSOR("  ", "State", this->state_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
-bool XiaomiMJMRV1::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiWX08ZM::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
@@ -57,7 +57,7 @@ bool XiaomiMJMRV1::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   return true;
 }
 
-}  // namespace xiaomi_mjmrv1
+}  // namespace xiaomi_wx08zm
 }  // namespace esphome
 
 #endif
