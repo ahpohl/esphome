@@ -8,12 +8,12 @@ from esphome.const import CONF_BATTERY_LEVEL, CONF_MAC_ADDRESS, CONF_TABLET, CON
 DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
 
-xiaomi_wx08zm_ns = cg.esphome_ns.namespace('xiaomi_wx08zm')
-XiaomiWX08ZM = xiaomi_wx08zm_ns.class_('XiaomiWX08ZM', esp32_ble_tracker.ESPBTDeviceListener,
+xiaomi_mjmrv1_ns = cg.esphome_ns.namespace('xiaomi_mjmrv1')
+XiaomiMJMRV1 = xiaomi_mjmrv1_ns.class_('XiaomiMJMRV1', esp32_ble_tracker.ESPBTDeviceListener,
                                        cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(): cv.declare_id(XiaomiWX08ZM),
+    cv.GenerateID(): cv.declare_id(XiaomiMJMRV1),
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
     cv.Optional(CONF_TABLET): sensor.sensor_schema(UNIT_PERCENT, ICON_BUG, 0),
     cv.Optional(CONF_STATE): sensor.sensor_schema(UNIT_EMPTY, ICON_LIGHTBULB, 0),

@@ -8,9 +8,9 @@
 #ifdef ARDUINO_ARCH_ESP32
 
 namespace esphome {
-namespace xiaomi_wx08zm {
+namespace xiaomi_mjmrv1 {
 
-class XiaomiWX08ZM : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
+class XiaomiMJMRV1 : public Component, public esp32_ble_tracker::ESPBTDeviceListener {
  public:
   void set_address(uint64_t address) { address_ = address; }
 
@@ -29,7 +29,7 @@ class XiaomiWX08ZM : public Component, public esp32_ble_tracker::ESPBTDeviceList
   sensor::Sensor *battery_level_{nullptr};
 };
 
-}  // namespace xiaomi_wx08zm
+}  // namespace xiaomi_mjmrv1
 }  // namespace esphome
 
 #endif
