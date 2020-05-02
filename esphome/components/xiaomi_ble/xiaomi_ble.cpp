@@ -90,16 +90,23 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.humidity = humidity / 10.0f;
       break;
     }
-    case 0x12: {  // state (on/off), 1 byte, 8-bit unsigned integer
-      if (data_length != 1)
+    case 0x10: {  // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
+      if (data_length != 2)
         return false;
-      result.state = data[0];
+      const uint16_t formaldehyde = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+      result.formaldehyde = formaldehyde / 100.0f;
       break;
     }
-    case 0x13: {  // tablet, 1 byte, 8-bit unsigned integer, 1 %
+    case 0x12: {  // activity (on/off), 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
-      result.tablet = data[0];
+      result.activity = data[0];
+      break;
+    }
+    case 0x13: {  // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
+      if (data_length != 1)
+        return false;
+      result.mosquito = data[0];
       break;
     }
     default:
@@ -134,34 +141,43 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   }
   last_frame_count = raw[4];
   result.is_duplicate = false;
+  result.raw_offset = result.has_capability ? 12 : 11;  // TODO: needs checking !!!
+  memset(result.name, '\0', 32);
 
   if ((raw[2] == 0x98) && (raw[3] == 0x00)) {  // MiFlora
     result.type = XiaomiParseResult::TYPE_HHCCJCY01;
-    result.raw_offset = 12;
+    result.name = "HHCCJCY01";
   } else if ((raw[2] == 0xaa) && (raw[3] == 0x01)) {  // round body, segment LCD
     result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
-    result.raw_offset = 11;
+    result.name = "LYWSDCGQ";
+  } else if ((raw[2] == 0x5d) && (raw[3] == 0x01)) {  // FlowerPot, RoPot
+    result.type = XiaomiParseResult::TYPE_HHCCPOT02;
+    result.name = "HHCCPOT02";
+  } else if ((raw[2] == 0xdf) && (raw[3] == 0x02)) {  // Xiaomi (Honeywell) formaldehyde sensor, OLED display
+    result.type = XiaomiParseResult::TYPE_JQJCY01YM;
+    result.name = "JQJCY01YM";
   } else if ((raw[2] == 0xdd) && (raw[3] == 0x03)) {  // Philips/Xiaomi BLE nightlight
     result.type = XiaomiParseResult::TYPE_MUE4094RT;
-    result.raw_offset = 5;
-  } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // Cleargrass (Qingping) alarm clock, segment LCD
-    result.type = XiaomiParseResult::TYPE_CGD1;
-    result.raw_offset = 11;
+    result.name = "MUE4094RT";
+    result.raw_offset -= 6;  // no MAC address
+  } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // round body, e-ink display
+    result.type = XiaomiParseResult::TYPE_CGG1;
+    result.name = "CGG1";
+  } else if ((raw[2] == 0xbc) && (raw[3] == 0x03)) {  // VegTrug Grow Care Garden
+    result.type = XiaomiParseResult::TYPE_GCLS02;
+    result.name = "GCLS02";
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x04)) {  // rectangular body, e-ink display
     result.type = XiaomiParseResult::TYPE_LYWSD02;
-    result.raw_offset = 12;
+    result.name = "LYWSD02";
   } else if ((raw[2] == 0x0a) && (raw[3] == 0x04)) {  // Mosquito Repellent Smart Version
     result.type = XiaomiParseResult::TYPE_WX08ZM;
-    result.raw_offset = 11;
-  } else if ((raw[2] == 0x76) && (raw[3] == 0x05)) {  // round body, e-ink display
-    result.type = XiaomiParseResult::TYPE_CGG1;
-    result.raw_offset = 11;
+    result.name = "WX08ZM";
+  } else if ((raw[2] == 0x76) && (raw[3] == 0x05)) {  // Cleargrass (Qingping) alarm clock, segment LCD
+    result.type = XiaomiParseResult::TYPE_CGD1;
+    result.name = "CGD1";
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x05)) {  // small square body, segment LCD, encrypted
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
-    result.raw_offset = 11;
-  } else if ((raw[2] == 0x1d) && (raw[3] == 0x18)) {  // Xiaomi Mi Scale
-    result.type = XiaomiParseResult::TYPE_XMTZC0XHM;
-    result.raw_offset = 0;
+    result.name = "LYWSD03MMC";
   } else {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
     return {};
@@ -258,22 +274,7 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
     return false;
   }
 
-  const char *name = "HHCCJCY01";
-  if (result->type == XiaomiParseResult::TYPE_LYWSDCGQ) {
-    name = "LYWSDCGQ";
-  } else if (result->type == XiaomiParseResult::TYPE_LYWSD02) {
-    name = "LYWSD02";
-  } else if (result->type == XiaomiParseResult::TYPE_CGG1) {
-    name = "CGG1";
-  } else if (result->type == XiaomiParseResult::TYPE_LYWSD03MMC) {
-    name = "LYWSD03MMC";
-  } else if (result->type == XiaomiParseResult::TYPE_CGD1) {
-    name = "CGD1";
-  } else if (result->type == XiaomiParseResult::TYPE_WX08ZM) {
-    name = "WX08ZM";
-  }
-
-  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", name, address.c_str());
+  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", *result->name, address.c_str());
 
   if (result->temperature.has_value()) {
     ESP_LOGD(TAG, "  Temperature: %.1f°C", *result->temperature);
@@ -293,11 +294,14 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
   }
-  if (result->tablet.has_value()) {
-    ESP_LOGD(TAG, "  Tablet: %.0f%%", *result->tablet);
+  if (result->mosquito.has_value()) {
+    ESP_LOGD(TAG, "  Mosquito: %.0f%%", *result->mosquito);
   }
-  if (result->state.has_value()) {
-    ESP_LOGD(TAG, "  State: %.0f", *result->state);
+  if (result->activity.has_value()) {
+    ESP_LOGD(TAG, "  Activity: %.0f", *result->activity);
+  }
+  if (res->motion.has_value()) {
+    ESP_LOGD(TAG, "  Motion: %.0f", *result->motion);
   }
 
   return true;

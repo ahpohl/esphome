@@ -18,14 +18,12 @@ class XiaomiMUE4094RT : public Component, public esp32_ble_tracker::ESPBTDeviceL
 
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
-  void set_tablet(sensor::Sensor *tablet) { tablet_ = tablet; }
-  void set_state(sensor::Sensor *state) { state_ = state; }
+  void set_motion(sensor::Sensor *motion) { motion_ = motion; }
   void set_battery_level(sensor::Sensor *battery_level) { battery_level_ = battery_level; }
 
  protected:
   uint64_t address_;
-  sensor::Sensor *tablet_{nullptr};
-  sensor::Sensor *state_{nullptr};
+  sensor::Sensor *motion_{nullptr};
   sensor::Sensor *battery_level_{nullptr};
 };
 

@@ -9,15 +9,12 @@ namespace xiaomi_hhccpot02 {
 static const char *TAG = "xiaomi_hhccpot02";
 
 void XiaomiHHCCPOT02 ::dump_config() {
-  ESP_LOGCONFIG(TAG, "Xiaomi HHCCPOT002");
-  LOG_SENSOR("  ", "Temperature", this->temperature_);
+  ESP_LOGCONFIG(TAG, "Xiaomi HHCCPOT02");
   LOG_SENSOR("  ", "Moisture", this->moisture_);
   LOG_SENSOR("  ", "Conductivity", this->conductivity_);
-  LOG_SENSOR("  ", "Illuminance", this->illuminance_);
-  LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
-bool XiaomiHHCCPOT02 ::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiHHCCPOT02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
@@ -43,16 +40,10 @@ bool XiaomiHHCCPOT02 ::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
       continue;
     }
-    if (res->temperature.has_value() && this->temperature_ != nullptr)
-      this->temperature_->publish_state(*res->temperature);
     if (res->moisture.has_value() && this->moisture_ != nullptr)
       this->moisture_->publish_state(*res->moisture);
     if (res->conductivity.has_value() && this->conductivity_ != nullptr)
       this->conductivity_->publish_state(*res->conductivity);
-    if (res->illuminance.has_value() && this->illuminance_ != nullptr)
-      this->illuminance_->publish_state(*res->illuminance);
-    if (res->battery_level.has_value() && this->battery_level_ != nullptr)
-      this->battery_level_->publish_state(*res->battery_level);
     success = true;
   }
 

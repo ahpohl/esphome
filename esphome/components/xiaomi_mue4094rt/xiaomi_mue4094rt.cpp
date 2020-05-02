@@ -10,8 +10,7 @@ static const char *TAG = "xiaomi_mue4094rt";
 
 void XiaomiMUE4094RT::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi MUE4094RT");
-  LOG_SENSOR("  ", "Tablet", this->tablet_);
-  LOG_SENSOR("  ", "State", this->state_);
+  LOG_SENSOR("  ", "Motion", this->motion_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
@@ -41,10 +40,8 @@ bool XiaomiMUE4094RT::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
       continue;
     }
-    if (res->tablet.has_value() && this->tablet_ != nullptr)
-      this->tablet_->publish_state(*res->tablet);
-    if (res->state.has_value() && this->state_ != nullptr)
-      this->state_->publish_state(*res->state);
+    if (res->motion.has_value() && this->motion_ != nullptr)
+      this->motion_->publish_state(*res->motion);
     if (res->battery_level.has_value() && this->battery_level_ != nullptr)
       this->battery_level_->publish_state(*res->battery_level);
     success = true;

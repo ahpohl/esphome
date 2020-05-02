@@ -10,30 +10,29 @@ namespace xiaomi_ble {
 
 struct XiaomiParseResult {
   enum {
-    TYPE_LYWSDCGQ,
     TYPE_HHCCJCY01,
-    TYPE_LYWSD02,
-    TYPE_CGG1,
-    TYPE_LYWSD03MMC,
-    TYPE_CGD1,
-    TYPE_WX08ZM,
-    TYPE_MUE4094RT,
-    TYPE_JQJCY01YM,
+    TYPE_LYWSDCGQ,
     TYPE_HHCCPOT02,
+    TYPE_JQJCY01YM,
+    TYPE_MUE4094RT,
+    TYPE_CGG1,
     TYPE_GCLS02,
-    TYPE_XMTZC0XHM
+    TYPE_LYWSD02,
+    TYPE_WX08ZM,
+    TYPE_CGD1,
+    TYPE_LYWSD03MMC
   } type;
+  char name[32];
   optional<float> temperature;
   optional<float> humidity;
-  optional<float> battery_level;
+  optional<float> moisture;
   optional<float> conductivity;
   optional<float> illuminance;
-  optional<float> moisture;
-  optional<float> tablet;
-  optional<float> state;
+  optional<float> formaldehyde;
+  optional<float> battery_level;
+  optional<float> mosquito;
+  optional<float> activity;
   optional<float> motion;
-  optional<float> weight;
-  optional<float> impedance;
   bool has_data;        // 0x40
   bool has_capability;  // 0x20
   bool has_encryption;  // 0x08
