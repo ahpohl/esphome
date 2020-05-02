@@ -9,7 +9,20 @@ namespace esphome {
 namespace xiaomi_ble {
 
 struct XiaomiParseResult {
-  enum { TYPE_LYWSDCGQ, TYPE_HHCCJCY01, TYPE_LYWSD02, TYPE_CGG1, TYPE_LYWSD03MMC, TYPE_CGD1, TYPE_WX08ZM } type;
+  enum {
+    TYPE_LYWSDCGQ,
+    TYPE_HHCCJCY01,
+    TYPE_LYWSD02,
+    TYPE_CGG1,
+    TYPE_LYWSD03MMC,
+    TYPE_CGD1,
+    TYPE_WX08ZM,
+    TYPE_MUE4094RT,
+    TYPE_JQJCY01YM,
+    TYPE_HHCCPOT02,
+    TYPE_GCLS02,
+    TYPE_XMTZC0XHM
+  } type;
   optional<float> temperature;
   optional<float> humidity;
   optional<float> battery_level;
@@ -18,6 +31,9 @@ struct XiaomiParseResult {
   optional<float> moisture;
   optional<float> tablet;
   optional<float> state;
+  optional<float> motion;
+  optional<float> weight;
+  optional<float> impedance;
   bool has_data;        // 0x40
   bool has_capability;  // 0x20
   bool has_encryption;  // 0x08

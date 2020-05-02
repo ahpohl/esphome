@@ -35,26 +35,10 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   }
 
   switch (raw[0]) {
-    case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
-      if (data_length != 4)
-        return false;
-      const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
-      result.temperature = temperature / 10.0f;
-      result.humidity = humidity / 10.0f;
-      break;
-    }
-    case 0x0A: {  // battery, 1 byte, 8-bit unsigned integer, 1 %
+    case 0x03: {  // motion, 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
-      result.battery_level = data[0];
-      break;
-    }
-    case 0x06: {  // humidity, 2 bytes, 16-bit signed integer (LE), 0.1 %
-      if (data_length != 2)
-        return false;
-      const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.humidity = humidity / 10.0f;
+      result.motion = data[0];
       break;
     }
     case 0x04: {  // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
@@ -64,11 +48,11 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.temperature = temperature / 10.0f;
       break;
     }
-    case 0x09: {  // conductivity, 2 bytes, 16-bit unsigned integer (LE), 1 µS/cm
+    case 0x06: {  // humidity, 2 bytes, 16-bit signed integer (LE), 0.1 %
       if (data_length != 2)
         return false;
-      const uint16_t conductivity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.conductivity = conductivity;
+      const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+      result.humidity = humidity / 10.0f;
       break;
     }
     case 0x07: {  // illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
@@ -84,6 +68,28 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.moisture = data[0];
       break;
     }
+    case 0x09: {  // conductivity, 2 bytes, 16-bit unsigned integer (LE), 1 µS/cm
+      if (data_length != 2)
+        return false;
+      const uint16_t conductivity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+      result.conductivity = conductivity;
+      break;
+    }
+    case 0x0A: {  // battery, 1 byte, 8-bit unsigned integer, 1 %
+      if (data_length != 1)
+        return false;
+      result.battery_level = data[0];
+      break;
+    }
+    case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
+      if (data_length != 4)
+        return false;
+      const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+      const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
+      result.temperature = temperature / 10.0f;
+      result.humidity = humidity / 10.0f;
+      break;
+    }
     case 0x12: {  // state (on/off), 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
@@ -96,7 +102,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.tablet = data[0];
       break;
     }
-
     default:
       return false;
   }
@@ -129,24 +134,34 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   }
   last_frame_count = raw[4];
   result.is_duplicate = false;
-  result.raw_offset = 11;
 
   if ((raw[2] == 0x98) && (raw[3] == 0x00)) {  // MiFlora
     result.type = XiaomiParseResult::TYPE_HHCCJCY01;
+    result.raw_offset = 12;
   } else if ((raw[2] == 0xaa) && (raw[3] == 0x01)) {  // round body, segment LCD
     result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
-    result.raw_offset = 12;
+    result.raw_offset = 11;
+  } else if ((raw[2] == 0xdd) && (raw[3] == 0x03)) {  // Philips/Xiaomi BLE nightlight
+    result.type = XiaomiParseResult::TYPE_MUE4094RT;
+    result.raw_offset = 5;
+  } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // Cleargrass (Qingping) alarm clock, segment LCD
+    result.type = XiaomiParseResult::TYPE_CGD1;
+    result.raw_offset = 11;
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x04)) {  // rectangular body, e-ink display
     result.type = XiaomiParseResult::TYPE_LYWSD02;
     result.raw_offset = 12;
+  } else if ((raw[2] == 0x0a) && (raw[3] == 0x04)) {  // Mosquito Repellent Smart Version
+    result.type = XiaomiParseResult::TYPE_WX08ZM;
+    result.raw_offset = 11;
   } else if ((raw[2] == 0x76) && (raw[3] == 0x05)) {  // round body, e-ink display
     result.type = XiaomiParseResult::TYPE_CGG1;
+    result.raw_offset = 11;
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x05)) {  // small square body, segment LCD, encrypted
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
-  } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // Cleargrass (Qingping) alarm clock, segment LCD
-    result.type = XiaomiParseResult::TYPE_CGD1;
-  } else if ((raw[2] == 0x0a) && (raw[3] == 0x04)) {  // Mosquito Repellent Smart Version (Model WX08ZM)
-    result.type = XiaomiParseResult::TYPE_WX08ZM;
+    result.raw_offset = 11;
+  } else if ((raw[2] == 0x1d) && (raw[3] == 0x18)) {  // Xiaomi Mi Scale
+    result.type = XiaomiParseResult::TYPE_XMTZC0XHM;
+    result.raw_offset = 0;
   } else {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
     return {};
