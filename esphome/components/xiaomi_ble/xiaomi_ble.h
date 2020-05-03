@@ -32,7 +32,7 @@ struct XiaomiParseResult {
   optional<float> battery_level;
   optional<float> tablet;
   optional<float> state;
-  optional<float> motion;
+  optional<bool> has_motion;
   bool has_data;        // 0x40
   bool has_capability;  // 0x20
   bool has_encryption;  // 0x08

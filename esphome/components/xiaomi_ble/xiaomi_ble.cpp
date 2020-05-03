@@ -38,7 +38,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     case 0x03: {  // motion, 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
-      result.motion = data[0];
+      result.has_motion = (data[0]) ? true : false;
       break;
     }
     case 0x04: {  // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
@@ -299,8 +299,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->state.has_value()) {
     ESP_LOGD(TAG, "  On/off state: %.0f", *result->state);
   }
-  if (result->motion.has_value()) {
-    ESP_LOGD(TAG, "  Motion: %.0f", *result->motion);
+  if (result->has_motion.has_value()) {
+    ESP_LOGD(TAG, "  Motion: %s", (*result->has_motion) ? "yes" : "no");
   }
 
   return true;

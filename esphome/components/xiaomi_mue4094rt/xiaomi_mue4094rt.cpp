@@ -10,7 +10,7 @@ static const char *TAG = "xiaomi_mue4094rt";
 
 void XiaomiMUE4094RT::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi MUE4094RT");
-  LOG_SENSOR("  ", "Motion", this->motion_);
+  LOG_BINARY_SENSOR("  ", "Motion", this);
 }
 
 bool XiaomiMUE4094RT::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -40,7 +40,9 @@ bool XiaomiMUE4094RT::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
       continue;
     }
     if (res->motion.has_value() && this->motion_ != nullptr)
-      this->motion_->publish_state(*res->motion);
+      this->publish_state(*res->has_motion);
+      this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
+    }
     success = true;
   }
 
