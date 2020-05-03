@@ -149,8 +149,6 @@ sensor:
     mac_address: "7A:80:8E:19:36:BA"
     motion:
       name: "MUE4094RT Motion"
-    battery_level:
-      name: "MUE4094RT Battery Level"
   - platform: xiaomi_wx08zm
     mac_address: "74:a3:4a:b5:07:34"
     tablet:

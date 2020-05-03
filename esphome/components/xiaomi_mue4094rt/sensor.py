@@ -1,8 +1,7 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, esp32_ble_tracker
-from esphome.const import CONF_BATTERY_LEVEL, CONF_MAC_ADDRESS, CONF_MOTION, \
-    UNIT_PERCENT, UNIT_EMPTY, ICON_BATTERY, ICON_MOTION_SENSOR, CONF_ID
+from esphome.const import CONF_MAC_ADDRESS, CONF_MOTION, UNIT_EMPTY, ICON_MOTION_SENSOR, CONF_ID
 
 
 DEPENDENCIES = ['esp32_ble_tracker']
@@ -16,7 +15,6 @@ CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(XiaomiMUE4094RT),
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
     cv.Optional(CONF_MOTION): sensor.sensor_schema(UNIT_EMPTY, ICON_MOTION_SENSOR, 0),
-    cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(UNIT_PERCENT, ICON_BATTERY, 0),
 }).extend(esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA).extend(cv.COMPONENT_SCHEMA)
 
 
@@ -30,6 +28,4 @@ def to_code(config):
     if CONF_MOTION in config:
         sens = yield sensor.new_sensor(config[CONF_MOTION])
         cg.add(var.set_motion(sens))
-    if CONF_BATTERY_LEVEL in config:
-        sens = yield sensor.new_sensor(config[CONF_BATTERY_LEVEL])
-        cg.add(var.set_battery_level(sens))
+

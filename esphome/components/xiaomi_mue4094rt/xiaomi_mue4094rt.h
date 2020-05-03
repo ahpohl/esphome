@@ -19,12 +19,10 @@ class XiaomiMUE4094RT : public Component, public esp32_ble_tracker::ESPBTDeviceL
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
   void set_motion(sensor::Sensor *motion) { motion_ = motion; }
-  void set_battery_level(sensor::Sensor *battery_level) { battery_level_ = battery_level; }
 
  protected:
   uint64_t address_;
   sensor::Sensor *motion_{nullptr};
-  sensor::Sensor *battery_level_{nullptr};
 };
 
 }  // namespace xiaomi_mue4094rt
