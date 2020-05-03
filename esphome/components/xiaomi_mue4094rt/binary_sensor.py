@@ -23,5 +23,5 @@ def to_code(config):
     yield esp32_ble_tracker.register_ble_device(var, config)
     yield binary_sensor.register_binary_sensor(var, config)
 
-    cg.add(var.set_addr(config[CONF_MAC_ADDRESS].as_hex))
+    cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
     cg.add(var.set_time(config[CONF_TIMEOUT]))

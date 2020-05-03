@@ -39,7 +39,7 @@ bool XiaomiMUE4094RT::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
       continue;
     }
-    if (res->motion.has_value() && this->motion_ != nullptr)
+    if (res->has_motion.has_value()) {
       this->publish_state(*res->has_motion);
       this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
     }
