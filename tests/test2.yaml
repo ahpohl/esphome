@@ -145,10 +145,6 @@ sensor:
       name: "JQJCY01YM Formaldehyde"
     battery_level:
       name: "JQJCY01YM Battery Level"
-  - platform: xiaomi_mue4094rt
-    mac_address: "7A:80:8E:19:36:BA"
-    motion:
-      name: "MUE4094RT Motion"
   - platform: xiaomi_wx08zm
     mac_address: "74:a3:4a:b5:07:34"
     tablet:
@@ -284,6 +280,10 @@ binary_sensor:
     id: ha_hello_world_binary
   - platform: as3935
     name: "Storm Alert"
+  - platform: xiaomi_mue4094rt
+    name: "MUE4094RT Nightlight"
+    mac_address: "7A:80:8E:19:36:BA"
+    timeout: "5s"
 
 esp32_ble_tracker:
   on_ble_advertise:
