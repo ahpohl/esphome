@@ -2,14 +2,14 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, esp32_ble_tracker
 from esphome.const import CONF_BATTERY_LEVEL, CONF_MAC_ADDRESS, CONF_MOTION, \
-    UNIT_PERCENT, UNIT_EMPTY, ICON_EMPTY, ICON_BATTERY, ICON_MOTION_SENSOR, CONF_ID
+    UNIT_PERCENT, UNIT_EMPTY, ICON_BATTERY, ICON_MOTION_SENSOR, CONF_ID
 
 
 DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
 
 xiaomi_mue4094rt_ns = cg.esphome_ns.namespace('xiaomi_mue4094rt')
-XiaomiMUE4094RT = xiaomi_mue4094rt_ns.class_('XiaomiMUE4094RT', 
+XiaomiMUE4094RT = xiaomi_mue4094rt_ns.class_('XiaomiMUE4094RT',
                                              esp32_ble_tracker.ESPBTDeviceListener, cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({

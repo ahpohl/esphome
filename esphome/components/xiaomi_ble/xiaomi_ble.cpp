@@ -158,7 +158,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   } else if ((raw[2] == 0xdd) && (raw[3] == 0x03)) {  // Philips/Xiaomi BLE nightlight
     result.type = XiaomiParseResult::TYPE_MUE4094RT;
     result.name = "MUE4094RT";
-    result.raw_offset -= 6;  // no MAC address
+    result.raw_offset -= 6;
   } else if ((raw[2] == 0x47) && (raw[3] == 0x03)) {  // round body, e-ink display
     result.type = XiaomiParseResult::TYPE_CGG1;
     result.name = "CGG1";

@@ -43,4 +43,3 @@ def to_code(config):
     if CONF_CONDUCTIVITY in config:
         sens = yield sensor.new_sensor(config[CONF_CONDUCTIVITY])
         cg.add(var.set_conductivity(sens))
-
