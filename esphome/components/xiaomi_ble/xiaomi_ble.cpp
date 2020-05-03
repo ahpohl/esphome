@@ -97,16 +97,16 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.formaldehyde = formaldehyde / 100.0f;
       break;
     }
-    case 0x12: {  // activity (on/off), 1 byte, 8-bit unsigned integer
+    case 0x12: {  // on/off state, 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
-      result.activity = data[0];
+      result.state = data[0];
       break;
     }
     case 0x13: {  // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
       if (data_length != 1)
         return false;
-      result.mosquito = data[0];
+      result.tablet = data[0];
       break;
     }
     default:
@@ -142,7 +142,6 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   last_frame_count = raw[4];
   result.is_duplicate = false;
   result.raw_offset = result.has_capability ? 12 : 11;  // TODO: needs checking !!!
-  memset(result.name, '\0', 32);
 
   if ((raw[2] == 0x98) && (raw[3] == 0x00)) {  // MiFlora
     result.type = XiaomiParseResult::TYPE_HHCCJCY01;
@@ -151,8 +150,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     result.type = XiaomiParseResult::TYPE_LYWSDCGQ;
     result.name = "LYWSDCGQ";
   } else if ((raw[2] == 0x5d) && (raw[3] == 0x01)) {  // FlowerPot, RoPot
-    result.type = XiaomiParseResult::TYPE_HHCCPOT02;
-    result.name = "HHCCPOT02";
+    result.type = XiaomiParseResult::TYPE_HHCCPOT002;
+    result.name = "HHCCPOT002";
   } else if ((raw[2] == 0xdf) && (raw[3] == 0x02)) {  // Xiaomi (Honeywell) formaldehyde sensor, OLED display
     result.type = XiaomiParseResult::TYPE_JQJCY01YM;
     result.name = "JQJCY01YM";
@@ -164,8 +163,8 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     result.type = XiaomiParseResult::TYPE_CGG1;
     result.name = "CGG1";
   } else if ((raw[2] == 0xbc) && (raw[3] == 0x03)) {  // VegTrug Grow Care Garden
-    result.type = XiaomiParseResult::TYPE_GCLS02;
-    result.name = "GCLS02";
+    result.type = XiaomiParseResult::TYPE_GCLS002;
+    result.name = "GCLS002";
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x04)) {  // rectangular body, e-ink display
     result.type = XiaomiParseResult::TYPE_LYWSD02;
     result.name = "LYWSD02";
@@ -274,7 +273,7 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
     return false;
   }
 
-  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", *result->name, address.c_str());
+  ESP_LOGD(TAG, "Got Xiaomi %s (%s):", result->name.c_str(), address.c_str());
 
   if (result->temperature.has_value()) {
     ESP_LOGD(TAG, "  Temperature: %.1f°C", *result->temperature);
@@ -294,13 +293,13 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->moisture.has_value()) {
     ESP_LOGD(TAG, "  Moisture: %.0f%%", *result->moisture);
   }
-  if (result->mosquito.has_value()) {
-    ESP_LOGD(TAG, "  Mosquito: %.0f%%", *result->mosquito);
+  if (result->tablet.has_value()) {
+    ESP_LOGD(TAG, "  Mosquito tablet: %.0f%%", *result->tablet);
   }
-  if (result->activity.has_value()) {
-    ESP_LOGD(TAG, "  Activity: %.0f", *result->activity);
+  if (result->state.has_value()) {
+    ESP_LOGD(TAG, "  On/off state: %.0f", *result->state);
   }
-  if (res->motion.has_value()) {
+  if (result->motion.has_value()) {
     ESP_LOGD(TAG, "  Motion: %.0f", *result->motion);
   }
 

@@ -70,19 +70,33 @@ sensor:
     service_uuid: '11223344-5566-7788-99aa-bbccddeeff00'
     name: "BLE Test Service 128"
   - platform: xiaomi_hhccjcy01
-    mac_address: 94:2B:FF:5C:91:61
+    mac_address: "94:2B:FF:5C:91:61"
     temperature:
-      name: "Xiaomi HHCCJCY01 Temperature"
+      name: "HHCCJCY01 Temperature"
     moisture:
-      name: "Xiaomi HHCCJCY01 Moisture"
-    illuminance:
-      name: "Xiaomi HHCCJCY01 Illuminance"
+      name: "HHCCJCY01 Moisture"
     conductivity:
-      name: "Xiaomi HHCCJCY01 Soil Conductivity"
-    battery_level:
-      name: "Xiaomi HHCCJCY01 Battery Level"
+      name: "HHCCJCY01 Soil Conductivity"
+    illuminance:
+      name: "HHCCJCY01 Illuminance"
+  - platform: xiaomi_gcls002
+    mac_address: "94:2B:FF:5C:91:61"
+    temperature:
+      name: "GCLS02 Temperature"
+    moisture:
+      name: "GCLS02 Moisture"
+    conductivity:
+      name: "GCLS02 Soil Conductivity"
+    illuminance:
+      name: "GCLS02 Illuminance"
+  - platform: xiaomi_hhccpot002
+    mac_address: "94:2B:FF:5C:91:61"
+    moisture:
+      name: "HHCCPOT002 Moisture"
+    conductivity:
+      name: "HHCCPOT002 Soil Conductivity"
   - platform: xiaomi_lywsdcgq
-    mac_address: 7A:80:8E:19:36:BA
+    mac_address: "7A:80:8E:19:36:BA"
     temperature:
       name: "Xiaomi LYWSDCGQ Temperature"
     humidity:
@@ -90,28 +104,19 @@ sensor:
     battery_level:
       name: "Xiaomi LYWSDCGQ Battery Level"
   - platform: xiaomi_lywsd02
-    mac_address: 3F:5B:7D:82:58:4E
+    mac_address: "3F:5B:7D:82:58:4E"
     temperature:
       name: "Xiaomi LYWSD02 Temperature"
     humidity:
       name: "Xiaomi LYWSD02 Humidity"
   - platform: xiaomi_cgg1
-    mac_address: 7A:80:8E:19:36:BA
+    mac_address: "7A:80:8E:19:36:BA"
     temperature:
       name: "Xiaomi CGG1 Temperature"
     humidity:
       name: "Xiaomi CGG1 Humidity"
     battery_level:
       name: "Xiaomi CGG1 Battery Level"
-  - platform: xiaomi_cgd1
-    mac_address: "A4:C1:38:D1:61:7D"
-    bindkey: "c99d2313182473b38001086febf781bd"
-    temperature:
-      name: "Xiaomi CGD1 Temperature"
-    humidity:
-      name: "Xiaomi CGD1 Humidity"
-    battery_level:
-      name: "Xiaomi CGD1 Battery Level"
   - platform: xiaomi_lywsd03mmc
     mac_address: "A4:C1:38:4E:16:78"
     bindkey: "e9efaa6873f9f9c87a5e75a5f814801c"
@@ -121,12 +126,37 @@ sensor:
       name: "Xiaomi LYWSD03MMC Humidity"
     battery_level:
       name: "Xiaomi LYWSD03MMC Battery Level"
+  - platform: xiaomi_cgd1
+    mac_address: "A4:C1:38:D1:61:7D"
+    bindkey: "c99d2313182473b38001086febf781bd"
+    temperature:
+      name: "Xiaomi CGD1 Temperature"
+    humidity:
+      name: "Xiaomi CGD1 Humidity"
+    battery_level:
+      name: "Xiaomi CGD1 Battery Level"
+  - platform: xiaomi_jqjcy01ym
+    mac_address: "7A:80:8E:19:36:BA"
+    temperature:
+      name: "JQJCY01YM Temperature"
+    humidity:
+      name: "JQJCY01YM Humidity"
+    formaldehyde:
+      name: "JQJCY01YM Formaldehyde"
+    battery_level:
+      name: "JQJCY01YM Battery Level"
+  - platform: xiaomi_mue4094rt
+    mac_address: "7A:80:8E:19:36:BA"
+    motion:
+      name: "MUE4094RT Motion"
+    battery_level:
+      name: "MUE4094RT Battery Level"
   - platform: xiaomi_wx08zm
-    mac_address: "74:A3:4A:B5:07:34"
+    mac_address: "74:a3:4a:b5:07:34"
     tablet:
-      name: "WX08ZM Tablet"
+      name: "WX08ZM Mosquito Tablet"
     state:
-      name: "WX08ZM State"
+      name: "WX08ZM On/Off State"
     battery_level:
       name: "WX08ZM Battery Level"
   - platform: pmsx003

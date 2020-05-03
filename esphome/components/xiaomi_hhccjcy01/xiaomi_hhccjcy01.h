@@ -25,10 +25,10 @@ class XiaomiHHCCJCY01 : public Component, public esp32_ble_tracker::ESPBTDeviceL
 
  protected:
   uint64_t address_;
+  sensor::Sensor *temperature_{nullptr};
   sensor::Sensor *moisture_{nullptr};
   sensor::Sensor *conductivity_{nullptr};
   sensor::Sensor *illuminance_{nullptr};
-  sensor::Sensor *battery_level_{nullptr};
 };
 
 }  // namespace xiaomi_hhccjcy01

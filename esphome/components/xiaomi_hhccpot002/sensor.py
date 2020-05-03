@@ -7,12 +7,12 @@ from esphome.const import CONF_MAC_ADDRESS, UNIT_PERCENT, ICON_WATER_PERCENT, CO
 DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
 
-xiaomi_hhccpot02_ns = cg.esphome_ns.namespace('xiaomi_hhccpot02')
-XiaomiHHCCPOT02 = xiaomi_hhccpot02_ns.class_('XiaomiHHCCPOT02',
-                                             esp32_ble_tracker.ESPBTDeviceListener, cg.Component)
+xiaomi_hhccpot002_ns = cg.esphome_ns.namespace('xiaomi_hhccpot002')
+XiaomiHHCCPOT002 = xiaomi_hhccpot002_ns.class_('XiaomiHHCCPOT002',
+                                               esp32_ble_tracker.ESPBTDeviceListener, cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({
-    cv.GenerateID(): cv.declare_id(XiaomiHHCCPOT02),
+    cv.GenerateID(): cv.declare_id(XiaomiHHCCPOT002),
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
     cv.Optional(CONF_MOISTURE): sensor.sensor_schema(UNIT_PERCENT, ICON_WATER_PERCENT, 0),
     cv.Optional(CONF_CONDUCTIVITY):

@@ -1,20 +1,20 @@
-#include "xiaomi_hhccpot02.h"
+#include "xiaomi_hhccpot002.h"
 #include "esphome/core/log.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
 namespace esphome {
-namespace xiaomi_hhccpot02 {
+namespace xiaomi_hhccpot002 {
 
-static const char *TAG = "xiaomi_hhccpot02";
+static const char *TAG = "xiaomi_hhccpot002";
 
-void XiaomiHHCCPOT02 ::dump_config() {
-  ESP_LOGCONFIG(TAG, "Xiaomi HHCCPOT02");
+void XiaomiHHCCPOT002 ::dump_config() {
+  ESP_LOGCONFIG(TAG, "Xiaomi HHCCPOT002");
   LOG_SENSOR("  ", "Moisture", this->moisture_);
   LOG_SENSOR("  ", "Conductivity", this->conductivity_);
 }
 
-bool XiaomiHHCCPOT02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiHHCCPOT002::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
@@ -54,7 +54,7 @@ bool XiaomiHHCCPOT02::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
   return true;
 }
 
-}  // namespace xiaomi_hhccpot02
+}  // namespace xiaomi_hhccpot002
 }  // namespace esphome
 
 #endif

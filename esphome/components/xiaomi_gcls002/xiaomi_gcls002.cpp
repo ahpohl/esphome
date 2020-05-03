@@ -1,14 +1,14 @@
-#include "xiaomi_gcls02.h"
+#include "xiaomi_gcls002.h"
 #include "esphome/core/log.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
 namespace esphome {
-namespace xiaomi_gcls02 {
+namespace xiaomi_gcls002 {
 
-static const char *TAG = "xiaomi_gcls02";
+static const char *TAG = "xiaomi_gcls002";
 
-void XiaomiGCLS02::dump_config() {
+void XiaomiGCLS002::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi GCLS002");
   LOG_SENSOR("  ", "Temperature", this->temperature_);
   LOG_SENSOR("  ", "Moisture", this->moisture_);
@@ -16,7 +16,7 @@ void XiaomiGCLS02::dump_config() {
   LOG_SENSOR("  ", "Illuminance", this->illuminance_);
 }
 
-bool XiaomiGCLS02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiGCLS002::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
@@ -60,7 +60,7 @@ bool XiaomiGCLS02::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   return true;
 }
 
-}  // namespace xiaomi_gcls02
+}  // namespace xiaomi_gcls002
 }  // namespace esphome
 
 #endif
