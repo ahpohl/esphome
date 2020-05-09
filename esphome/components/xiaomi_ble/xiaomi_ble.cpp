@@ -141,7 +141,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   }
   last_frame_count = raw[4];
   result.is_duplicate = false;
-  result.raw_offset = result.has_capability ? 12 : 11;  // TODO: needs checking !!!
+  result.raw_offset = result.has_capability ? 12 : 11;
 
   if ((raw[2] == 0x98) && (raw[3] == 0x00)) {  // MiFlora
     result.type = XiaomiParseResult::TYPE_HHCCJCY01;

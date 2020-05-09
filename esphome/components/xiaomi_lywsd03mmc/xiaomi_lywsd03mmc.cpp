@@ -39,6 +39,10 @@ bool XiaomiLYWSD03MMC::parse_device(const esp32_ble_tracker::ESPBTDevice &device
     if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
       continue;
     }
+    if (res->humidity.has_value() && this->humidity_ != nullptr) {
+      // see https://github.com/custom-components/sensor.mitemp_bt/issues/7#issuecomment-595948254
+      *res->humidity = trunc(*res->humidity);
+    }
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
       continue;
     }
