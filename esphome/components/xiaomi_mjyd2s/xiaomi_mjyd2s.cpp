@@ -11,6 +11,7 @@ static const char *TAG = "xiaomi_mjyd2s";
 void XiaomiMJYD2S::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi MJYD2S");
   LOG_BINARY_SENSOR("  ", "Motion", this);
+  LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
 bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
@@ -43,6 +44,8 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
       this->publish_state(*res->has_motion);
       this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
     }
+    if (res->battery_level.has_value() && this->battery_level_ != nullptr)
+      this->battery_level_->publish_state(*res->battery_level);
     success = true;
   }
 
