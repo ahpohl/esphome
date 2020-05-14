@@ -3,6 +3,7 @@ import esphome.config_validation as cv
 from esphome.components import binary_sensor, esp32_ble_tracker
 from esphome.const import CONF_MAC_ADDRESS, CONF_TIMEOUT, CONF_ID
 
+
 DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
 

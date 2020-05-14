@@ -100,7 +100,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     case 0x12: {  // on/off state, 1 byte, 8-bit unsigned integer
       if (data_length != 1)
         return false;
-      result.state = data[0];
+      result.is_active = (data[0]) ? true : false;
       break;
     }
     case 0x13: {  // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
@@ -296,8 +296,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->tablet.has_value()) {
     ESP_LOGD(TAG, "  Mosquito tablet: %.0f%%", *result->tablet);
   }
-  if (result->state.has_value()) {
-    ESP_LOGD(TAG, "  On/off state: %.0f", *result->state);
+  if (result->is_active.has_value()) {
+    ESP_LOGD(TAG, "  Repellent: %s", (*result->is_active) ? "on" : "off");
   }
   if (result->has_motion.has_value()) {
     ESP_LOGD(TAG, "  Motion: %s", (*result->has_motion) ? "yes" : "no");
