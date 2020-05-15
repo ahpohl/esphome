@@ -90,6 +90,14 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.humidity = humidity / 10.0f;
       break;
     }
+    case 0x0F: {  // motion + illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
+      if (data_length != 3)
+        return false;
+      const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+      result.illuminance = illuminance;
+      result.has_motion = true;
+      break;
+    }
     case 0x10: {  // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
       if (data_length != 2)
         return false;
