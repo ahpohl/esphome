@@ -10,7 +10,7 @@ static const char *TAG = "xiaomi_wx08zm";
 
 void XiaomiWX08ZM::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi WX08ZM");
-  LOG_BINARY_SENSOR("  ", "Repellent", this);
+  LOG_BINARY_SENSOR("  ", "Mosquito Repellent", this);
   LOG_SENSOR("  ", "Tablet Resource", this->tablet_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
