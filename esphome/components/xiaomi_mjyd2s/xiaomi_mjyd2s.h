@@ -23,12 +23,14 @@ class XiaomiMJYD2S : public Component,
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
   void set_time(uint16_t timeout) { timeout_ = timeout; }
+  void set_illuminance(sensor::Sensor *illuminance) { illuminance_ = illuminance; }
   void set_battery_level(sensor::Sensor *battery_level) { battery_level_ = battery_level; }
 
  protected:
   uint64_t address_;
   uint16_t timeout_;
   uint8_t bindkey_[16];
+  sensor::Sensor *illuminance_{nullptr};
   sensor::Sensor *battery_level_{nullptr};
 };
 

@@ -189,7 +189,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
 }
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
-  if ((raw.size() < 22) || (raw.size() > 24)) {
+  if ((raw.size() < 19) || (raw.size() > 24)) {  // default min packet length 22
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
     ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     return false;

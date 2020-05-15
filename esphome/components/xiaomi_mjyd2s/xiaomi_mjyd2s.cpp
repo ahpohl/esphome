@@ -11,6 +11,7 @@ static const char *TAG = "xiaomi_mjyd2s";
 void XiaomiMJYD2S::dump_config() {
   ESP_LOGCONFIG(TAG, "Xiaomi MJYD2S");
   LOG_BINARY_SENSOR("  ", "Motion", this);
+  LOG_SENSOR("  ", "Illuminance", this->illuminance_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
