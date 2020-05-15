@@ -189,7 +189,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
 }
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
-  if ((raw.size() < 19) || (raw.size() > 24)) {  // default min packet length 22
+  if ((raw.size() < 22) || (raw.size() > 25)) {
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
     ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     return false;
@@ -208,15 +208,14 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
                          .ivsize = 12};
 
   vector.datasize = raw.size() - 18;
-  int offset = vector.datasize - 4;
-
   const uint8_t *v = raw.data();
+
   memcpy(vector.key, bindkey, vector.keysize);
   memcpy(vector.ciphertext, v + 11, vector.datasize);
-  memcpy(vector.tag, v + 18 + offset, vector.tagsize);
-  memcpy(vector.iv, v + 5, 6);                // MAC address reversed
-  memcpy(vector.iv + 6, v + 2, 3);            // sensor type (2) + packet id (1)
-  memcpy(vector.iv + 9, v + 15 + offset, 3);  // payload counter
+  memcpy(vector.tag, v + raw.size() - vector.tagsize, vector.tagsize);
+  memcpy(vector.iv, v + 5, 6);                   // MAC address reversed
+  memcpy(vector.iv + 6, v + 2, 3);               // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + raw.size() - 7, 3);  // payload counter
 
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
