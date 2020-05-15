@@ -203,15 +203,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
                          .tag = {0},
                          .keysize = 16,
                          .authsize = 1,
-                         .datasize = 4,  // battery
+                         .datasize = 0,
                          .tagsize = 4,
                          .ivsize = 12};
 
-  int offset = 0;
-  if (raw.size() == 23) {
-    vector.datasize = 5;  // temperature or humidity
-    offset = 1;
-  }
+  vector.datasize = raw.size() - 18;
+  int offset = vector.datasize - 4;
 
   const uint8_t *v = raw.data();
   memcpy(vector.key, bindkey, vector.keysize);
