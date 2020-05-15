@@ -90,6 +90,14 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
       result.humidity = humidity / 10.0f;
       break;
     }
+    case 0x0F: {  // motion + illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
+      if (data_length != 3)
+        return false;
+      const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+      result.illuminance = illuminance;
+      result.has_motion = true;
+      break;
+    }
     case 0x10: {  // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
       if (data_length != 2)
         return false;
@@ -177,6 +185,9 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   } else if ((raw[2] == 0x5b) && (raw[3] == 0x05)) {  // small square body, segment LCD, encrypted
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
     result.name = "LYWSD03MMC";
+  } else if ((raw[2] == 0xf6) && (raw[3] == 0x07)) {  // Xiaomi-Yeelight BLE nightlight
+    result.type = XiaomiParseResult::TYPE_MJYD2S;
+    result.name = "MJYD2S";
   } else {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
     return {};
@@ -186,7 +197,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
 }
 
 bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
-  if ((raw.size() < 22) || (raw.size() > 23)) {
+  if ((raw.size() < 22) || (raw.size() > 25)) {
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
     ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
     return false;
@@ -200,23 +211,19 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
                          .tag = {0},
                          .keysize = 16,
                          .authsize = 1,
-                         .datasize = 4,  // battery
+                         .datasize = 0,
                          .tagsize = 4,
                          .ivsize = 12};
 
-  int offset = 0;
-  if (raw.size() == 23) {
-    vector.datasize = 5;  // temperature or humidity
-    offset = 1;
-  }
-
+  vector.datasize = raw.size() - 18;
   const uint8_t *v = raw.data();
+
   memcpy(vector.key, bindkey, vector.keysize);
   memcpy(vector.ciphertext, v + 11, vector.datasize);
-  memcpy(vector.tag, v + 18 + offset, vector.tagsize);
-  memcpy(vector.iv, v + 5, 6);                // MAC address reversed
-  memcpy(vector.iv + 6, v + 2, 3);            // sensor type (2) + packet id (1)
-  memcpy(vector.iv + 9, v + 15 + offset, 3);  // payload counter
+  memcpy(vector.tag, v + raw.size() - vector.tagsize, vector.tagsize);
+  memcpy(vector.iv, v + 5, 6);                   // MAC address reversed
+  memcpy(vector.iv + 6, v + 2, 3);               // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + raw.size() - 7, 3);  // payload counter
 
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
