@@ -33,7 +33,7 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     }
     if (res->has_encryption &&
         (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data),
-                                               this->bindkey_))) &&
+                                              this->bindkey_))) &&
         (!(xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data),
                                               this->bindkey_, this->address_)))) {
       continue;
