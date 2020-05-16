@@ -274,6 +274,90 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey) {
   return true;
 }
 
+bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, const uint64_t &address) {
+  if (raw.size() != 19) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): data packet has wrong size (%d)!", raw.size());
+    ESP_LOGVV(TAG, "  Packet : %s", hexencode(raw.data(), raw.size()).c_str());
+    return false;
+  }
+
+  uint8_t mac_reverse[6] = {0};
+  mac_reverse[5] = (uint8_t) (address >> 40);
+  mac_reverse[4] = (uint8_t) (address >> 32);
+  mac_reverse[3] = (uint8_t) (address >> 24);
+  mac_reverse[2] = (uint8_t) (address >> 16);
+  mac_reverse[1] = (uint8_t) (address >> 8);
+  mac_reverse[0] = (uint8_t) (address >> 0);
+
+  XiaomiAESVector vector{.key = {0},
+                         .plaintext = {0},
+                         .ciphertext = {0},
+                         .authdata = {0x11},
+                         .iv = {0},
+                         .tag = {0},
+                         .keysize = 16,
+                         .authsize = 1,
+                         .datasize = 7,
+                         .tagsize = 4,
+                         .ivsize = 12};
+
+  const uint8_t *v = raw.data();
+
+  memcpy(vector.key, bindkey, vector.keysize);
+  memcpy(vector.ciphertext, v + 5, vector.datasize);
+  memcpy(vector.tag, v + 15, vector.tagsize);
+  memcpy(vector.iv, mac_reverse, 6); // MAC address
+  memcpy(vector.iv + 6, v + 2, 3);   // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + 12, 3);  // payload counter
+
+  mbedtls_ccm_context ctx;
+  mbedtls_ccm_init(&ctx);
+
+  int ret = mbedtls_ccm_setkey(&ctx, MBEDTLS_CIPHER_ID_AES, vector.key, vector.keysize * 8);
+  if (ret) {
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): mbedtls_ccm_setkey() failed.");
+    mbedtls_ccm_free(&ctx);
+    return false;
+  }
+
+  ret = mbedtls_ccm_auth_decrypt(&ctx, vector.datasize, vector.iv, vector.ivsize, vector.authdata, vector.authsize,
+                                 vector.ciphertext, vector.plaintext, vector.tag, vector.tagsize);
+  if (ret) {
+    uint8_t mac_address[6] = {0};
+    memcpy(mac_address,     mac_reverse + 5, 1);
+    memcpy(mac_address + 1, mac_reverse + 4, 1);
+    memcpy(mac_address + 2, mac_reverse + 3, 1);
+    memcpy(mac_address + 3, mac_reverse + 2, 1);
+    memcpy(mac_address + 4, mac_reverse + 1, 1);
+    memcpy(mac_address + 5, mac_reverse    , 1);
+    ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
+    ESP_LOGVV(TAG, "  MAC address : %s", hexencode(mac_address, 6).c_str());
+    ESP_LOGVV(TAG, "       Packet : %s", hexencode(raw.data(), raw.size()).c_str());
+    ESP_LOGVV(TAG, "          Key : %s", hexencode(vector.key, vector.keysize).c_str());
+    ESP_LOGVV(TAG, "           Iv : %s", hexencode(vector.iv, vector.ivsize).c_str());
+    ESP_LOGVV(TAG, "       Cipher : %s", hexencode(vector.ciphertext, vector.datasize).c_str());
+    ESP_LOGVV(TAG, "          Tag : %s", hexencode(vector.tag, vector.tagsize).c_str());
+    mbedtls_ccm_free(&ctx);
+    return false;
+  }
+
+  // replace encrypted payload with plaintext
+  uint8_t *p = vector.plaintext;
+  for (std::vector<uint8_t>::iterator it = raw.begin() + 5; it != raw.begin() + 5 + vector.datasize; ++it) {
+    *it = *(p++);
+  }
+
+  // clear encrypted flag
+  raw[0] &= ~0x08;
+
+  ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption passed.");
+  ESP_LOGVV(TAG, "  Plaintext : %s, Packet : %d", hexencode(raw.data() + 5, vector.datasize).c_str(),
+            static_cast<int>(raw[4]));
+
+  mbedtls_ccm_free(&ctx);
+  return true;
+}
+
 bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std::string &address) {
   if (!result.has_value()) {
     ESP_LOGVV(TAG, "report_xiaomi_results(): no results available.");

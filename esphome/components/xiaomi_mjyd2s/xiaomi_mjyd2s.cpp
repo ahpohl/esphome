@@ -31,9 +31,14 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     if (res->is_duplicate) {
       continue;
     }
-    if (res->has_encryption && (!(xiaomi_ble::decrypt_xiaomi_payload(
-                                   const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_)))) {
-      continue;
+    if (res->has_encryption) {
+      bool res1 = false, res2 = false;
+      res1 = xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_);
+      res2 = xiaomi_ble::decrypt_xiaomi_payload(const_cast<std::vector<uint8_t> &>(service_data.data), this->bindkey_,
+                                         this->address_);
+      if (!res1 || !res2) {
+        continue;
+      }
     }
     if (!(xiaomi_ble::parse_xiaomi_message(service_data.data, *res))) {
       continue;
