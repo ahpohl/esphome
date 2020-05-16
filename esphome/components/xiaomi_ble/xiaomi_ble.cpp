@@ -244,7 +244,7 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, c
   // replace encrypted payload with plaintext
   uint8_t *p = vector.plaintext;
   for (std::vector<uint8_t>::iterator it = raw.begin() + cipher_pos; it != raw.begin() + cipher_pos + vector.datasize;
-      ++it) {
+       ++it) {
     *it = *(p++);
   }
 
