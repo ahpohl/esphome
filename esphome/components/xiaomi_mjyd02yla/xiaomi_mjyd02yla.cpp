@@ -1,21 +1,21 @@
-#include "xiaomi_mjyd2s.h"
+#include "xiaomi_mjyd02yla.h"
 #include "esphome/core/log.h"
 
 #ifdef ARDUINO_ARCH_ESP32
 
 namespace esphome {
-namespace xiaomi_mjyd2s {
+namespace xiaomi_mjyd02yla {
 
-static const char *TAG = "xiaomi_mjyd2s";
+static const char *TAG = "xiaomi_mjyd02yla";
 
-void XiaomiMJYD2S::dump_config() {
-  ESP_LOGCONFIG(TAG, "Xiaomi MJYD2S");
+void XiaomiMJYD02YLA::dump_config() {
+  ESP_LOGCONFIG(TAG, "Xiaomi MJYD02YL-A");
   LOG_BINARY_SENSOR("  ", "Motion", this);
   LOG_SENSOR("  ", "Illuminance", this->illuminance_);
   LOG_SENSOR("  ", "Battery Level", this->battery_level_);
 }
 
-bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
+bool XiaomiMJYD02YLA::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   if (device.address_uint64() != this->address_) {
     ESP_LOGVV(TAG, "parse_device(): unknown MAC address.");
     return false;
@@ -42,10 +42,8 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     if (!(xiaomi_ble::report_xiaomi_results(res, device.address_str()))) {
       continue;
     }
-    if (res->has_motion.has_value()) {
+    if (res->has_motion.has_value())
       this->publish_state(*res->has_motion);
-      // this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
-    }
     if (res->illuminance.has_value() && this->illuminance_ != nullptr)
       this->illuminance_->publish_state(*res->illuminance);
     if (res->battery_level.has_value() && this->battery_level_ != nullptr)
@@ -60,7 +58,7 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
   return true;
 }
 
-void XiaomiMJYD2S::set_bindkey(const std::string &bindkey) {
+void XiaomiMJYD02YLA::set_bindkey(const std::string &bindkey) {
   memset(bindkey_, 0, 16);
   if (bindkey.size() != 32) {
     return;
@@ -72,7 +70,7 @@ void XiaomiMJYD2S::set_bindkey(const std::string &bindkey) {
   }
 }
 
-}  // namespace xiaomi_mjyd2s
+}  // namespace xiaomi_mjyd02yla
 }  // namespace esphome
 
 #endif
