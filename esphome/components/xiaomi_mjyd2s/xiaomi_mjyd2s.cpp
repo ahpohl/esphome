@@ -46,7 +46,7 @@ bool XiaomiMJYD2S::parse_device(const esp32_ble_tracker::ESPBTDevice &device) {
     }
     if (res->has_motion.has_value()) {
       this->publish_state(*res->has_motion);
-      this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
+      // this->set_timeout("motion_timeout", timeout_, [this]() { this->publish_state(false); });
     }
     if (res->illuminance.has_value() && this->illuminance_ != nullptr)
       this->illuminance_->publish_state(*res->illuminance);

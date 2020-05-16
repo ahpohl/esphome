@@ -34,91 +34,66 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     return false;
   }
 
-  switch (raw[0]) {
-    case 0x03: {  // motion, 1 byte, 8-bit unsigned integer
-      if (data_length != 1)
-        return false;
-      result.has_motion = (data[0]) ? true : false;
-      break;
-    }
-    case 0x04: {  // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
-      if (data_length != 2)
-        return false;
-      const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.temperature = temperature / 10.0f;
-      break;
-    }
-    case 0x06: {  // humidity, 2 bytes, 16-bit signed integer (LE), 0.1 %
-      if (data_length != 2)
-        return false;
-      const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.humidity = humidity / 10.0f;
-      break;
-    }
-    case 0x07: {  // illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
-      if (data_length != 3)
-        return false;
-      const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
-      result.illuminance = illuminance;
-      break;
-    }
-    case 0x08: {  // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
-      if (data_length != 1)
-        return false;
-      result.moisture = data[0];
-      break;
-    }
-    case 0x09: {  // conductivity, 2 bytes, 16-bit unsigned integer (LE), 1 µS/cm
-      if (data_length != 2)
-        return false;
-      const uint16_t conductivity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.conductivity = conductivity;
-      break;
-    }
-    case 0x0A: {  // battery, 1 byte, 8-bit unsigned integer, 1 %
-      if (data_length != 1)
-        return false;
-      result.battery_level = data[0];
-      break;
-    }
-    case 0x0D: {  // temperature+humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
-      if (data_length != 4)
-        return false;
-      const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
-      result.temperature = temperature / 10.0f;
-      result.humidity = humidity / 10.0f;
-      break;
-    }
-    case 0x0F: {  // motion + illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
-      if (data_length != 3)
-        return false;
-      const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
-      result.illuminance = illuminance;
+  // motion detection, 1 byte, 8-bit unsigned integer
+  if ((raw[0] == 0x03) && (data_length == 1)) {
+    result.has_motion = (data[0]) ? true : false;
+  }
+  // motion detection, 4 byte, 32-bit unsigned integer
+  else if ((raw[0] == 0x17) && (data_length == 4)) {
+    result.has_motion = (data[0]) ? false : true;
+  }
+  // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
+  else if ((raw[0] == 0x04) && (data_length == 2)) {
+    const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+    result.temperature = temperature / 10.0f;
+  }
+  // humidity, 2 bytes, 16-bit signed integer (LE), 0.1 %
+  else if ((raw[0] == 0x06) && (data_length == 2)) {
+    const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+    result.humidity = humidity / 10.0f;
+  }
+  // illuminance (+ motion), 3 bytes, 24-bit unsigned integer (LE), 1 lx
+  else if (((raw[0] == 0x07) || (raw[0] == 0x0F)) && (data_length == 3)) {
+    const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+    result.illuminance = illuminance;
+    if (raw[0] == 0x0F)
       result.has_motion = true;
-      break;
-    }
-    case 0x10: {  // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
-      if (data_length != 2)
-        return false;
-      const uint16_t formaldehyde = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
-      result.formaldehyde = formaldehyde / 100.0f;
-      break;
-    }
-    case 0x12: {  // on/off state, 1 byte, 8-bit unsigned integer
-      if (data_length != 1)
-        return false;
-      result.state = data[0];
-      break;
-    }
-    case 0x13: {  // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
-      if (data_length != 1)
-        return false;
-      result.tablet = data[0];
-      break;
-    }
-    default:
-      return false;
+  }
+  // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
+  else if ((raw[0] == 0x08) && (data_length == 1)) {
+    result.moisture = data[0];
+  }
+  // conductivity, 2 bytes, 16-bit unsigned integer (LE), 1 µS/cm
+  else if ((raw[0] == 0x09) && (data_length == 2)) {
+    const uint16_t conductivity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+    result.conductivity = conductivity;
+  }
+  // battery, 1 byte, 8-bit unsigned integer, 1 %
+  else if ((raw[0] == 0x0A) && (data_length == 1)) {
+    result.battery_level = data[0];
+  }
+  // temperature + humidity, 4 bytes, 16-bit signed integer (LE) each, 0.1 °C, 0.1 %
+  else if ((raw[0] == 0x0D) && (data_length == 4)) {
+    const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+    const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
+    result.temperature = temperature / 10.0f;
+    result.humidity = humidity / 10.0f;
+  }
+  // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
+  else if ((raw[0] == 0x10) && (data_length == 2)) {
+    const uint16_t formaldehyde = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
+    result.formaldehyde = formaldehyde / 100.0f;
+  }
+  // on/off state, 1 byte, 8-bit unsigned integer
+  else if ((raw[0] == 0x12) && (data_length == 1)) {
+    result.is_active = (data[0]) ? true : false;
+  }
+  // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
+  else if ((raw[0] == 0x13) && (data_length == 1)) {
+    result.tablet = data[0];
+  }
+  else {
+    return false;
   }
 
   return true;
@@ -188,6 +163,7 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
   } else if ((raw[2] == 0xf6) && (raw[3] == 0x07)) {  // Xiaomi-Yeelight BLE nightlight
     result.type = XiaomiParseResult::TYPE_MJYD2S;
     result.name = "MJYD2S";
+    result.raw_offset -= 6;
   } else {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
     return {};
@@ -387,8 +363,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->tablet.has_value()) {
     ESP_LOGD(TAG, "  Mosquito tablet: %.0f%%", *result->tablet);
   }
-  if (result->state.has_value()) {
-    ESP_LOGD(TAG, "  On/off state: %.0f", *result->state);
+  if (result->is_active.has_value()) {
+    ESP_LOGD(TAG, "  Repellent: %s", (*result->is_active) ? "on" : "off");
   }
   if (result->has_motion.has_value()) {
     ESP_LOGD(TAG, "  Motion: %s", (*result->has_motion) ? "yes" : "no");
