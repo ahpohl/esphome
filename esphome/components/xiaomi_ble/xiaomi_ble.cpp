@@ -91,8 +91,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
   else if ((raw[0] == 0x13) && (data_length == 1)) {
     result.tablet = data[0];
-  }
-  else {
+  } else {
     return false;
   }
 
@@ -244,7 +243,8 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, c
 
   // replace encrypted payload with plaintext
   uint8_t *p = vector.plaintext;
-  for (std::vector<uint8_t>::iterator it = raw.begin() + cipher_pos; it != raw.begin() + cipher_pos + vector.datasize; ++it) {
+  for (std::vector<uint8_t>::iterator it = raw.begin() + cipher_pos; it != raw.begin() + cipher_pos + vector.datasize;
+      ++it) {
     *it = *(p++);
   }
 

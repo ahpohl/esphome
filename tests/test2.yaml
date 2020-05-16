@@ -145,14 +145,6 @@ sensor:
       name: "JQJCY01YM Formaldehyde"
     battery_level:
       name: "JQJCY01YM Battery Level"
-  - platform: xiaomi_wx08zm
-    mac_address: "74:a3:4a:b5:07:34"
-    tablet:
-      name: "WX08ZM Mosquito Tablet"
-    state:
-      name: "WX08ZM On/Off State"
-    battery_level:
-      name: "WX08ZM Battery Level"
   - platform: pmsx003
     type: PMSX003
     pm_1_0:
@@ -284,6 +276,13 @@ binary_sensor:
     name: "MUE4094RT Nightlight"
     mac_address: "7A:80:8E:19:36:BA"
     timeout: "5s"
+  - platform: xiaomi_wx08zm
+    name: "WX08ZM Mosquito Repellent"
+    mac_address: "74:a3:4a:b5:07:34"
+    tablet:
+      name: "WX08ZM Tablet Resource"
+    battery_level:
+      name: "WX08ZM Battery Level"
   - platform: xiaomi_mjyd2s
     device_class: motion
     name: "MJYD2S Night Light"
