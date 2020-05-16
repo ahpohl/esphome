@@ -10,7 +10,7 @@ AUTO_LOAD = ['xiaomi_ble']
 
 xiaomi_mjyd02yla_ns = cg.esphome_ns.namespace('xiaomi_mjyd02yla')
 XiaomiMJYD02YLA = xiaomi_mjyd02yla_ns.class_('XiaomiMJYD02YLA', binary_sensor.BinarySensor,
-                                       cg.Component, esp32_ble_tracker.ESPBTDeviceListener)
+                                             cg.Component, esp32_ble_tracker.ESPBTDeviceListener)
 
 CONFIG_SCHEMA = cv.All(binary_sensor.BINARY_SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(XiaomiMJYD02YLA),
