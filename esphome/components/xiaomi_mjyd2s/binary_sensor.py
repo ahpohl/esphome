@@ -10,7 +10,7 @@ AUTO_LOAD = ['xiaomi_ble']
 
 xiaomi_mjyd2s_ns = cg.esphome_ns.namespace('xiaomi_mjyd2s')
 XiaomiMJYD2S = xiaomi_mjyd2s_ns.class_('XiaomiMJYD2S', binary_sensor.BinarySensor,
-                                             cg.Component, esp32_ble_tracker.ESPBTDeviceListener)
+                                       cg.Component, esp32_ble_tracker.ESPBTDeviceListener)
 
 CONFIG_SCHEMA = cv.All(binary_sensor.BINARY_SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(XiaomiMJYD2S),
@@ -31,7 +31,7 @@ def to_code(config):
     cg.add(var.set_address(config[CONF_MAC_ADDRESS].as_hex))
     cg.add(var.set_bindkey(config[CONF_BINDKEY]))
     cg.add(var.set_time(config[CONF_TIMEOUT]))
- 
+
     if CONF_ILLUMINANCE in config:
         sens = yield sensor.new_sensor(config[CONF_ILLUMINANCE])
         cg.add(var.set_illuminance(sens))

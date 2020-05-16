@@ -282,12 +282,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, c
   }
 
   uint8_t mac_reverse[6] = {0};
-  mac_reverse[5] = (uint8_t) (address >> 40);
-  mac_reverse[4] = (uint8_t) (address >> 32);
-  mac_reverse[3] = (uint8_t) (address >> 24);
-  mac_reverse[2] = (uint8_t) (address >> 16);
-  mac_reverse[1] = (uint8_t) (address >> 8);
-  mac_reverse[0] = (uint8_t) (address >> 0);
+  mac_reverse[5] = (uint8_t)(address >> 40);
+  mac_reverse[4] = (uint8_t)(address >> 32);
+  mac_reverse[3] = (uint8_t)(address >> 24);
+  mac_reverse[2] = (uint8_t)(address >> 16);
+  mac_reverse[1] = (uint8_t)(address >> 8);
+  mac_reverse[0] = (uint8_t)(address >> 0);
 
   XiaomiAESVector vector{.key = {0},
                          .plaintext = {0},
@@ -306,9 +306,9 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, c
   memcpy(vector.key, bindkey, vector.keysize);
   memcpy(vector.ciphertext, v + 5, vector.datasize);
   memcpy(vector.tag, v + 15, vector.tagsize);
-  memcpy(vector.iv, mac_reverse, 6); // MAC address
-  memcpy(vector.iv + 6, v + 2, 3);   // sensor type (2) + packet id (1)
-  memcpy(vector.iv + 9, v + 12, 3);  // payload counter
+  memcpy(vector.iv, mac_reverse, 6);  // MAC address
+  memcpy(vector.iv + 6, v + 2, 3);    // sensor type (2) + packet id (1)
+  memcpy(vector.iv + 9, v + 12, 3);   // payload counter
 
   mbedtls_ccm_context ctx;
   mbedtls_ccm_init(&ctx);
@@ -324,12 +324,12 @@ bool decrypt_xiaomi_payload(std::vector<uint8_t> &raw, const uint8_t *bindkey, c
                                  vector.ciphertext, vector.plaintext, vector.tag, vector.tagsize);
   if (ret) {
     uint8_t mac_address[6] = {0};
-    memcpy(mac_address,     mac_reverse + 5, 1);
+    memcpy(mac_address, mac_reverse + 5, 1);
     memcpy(mac_address + 1, mac_reverse + 4, 1);
     memcpy(mac_address + 2, mac_reverse + 3, 1);
     memcpy(mac_address + 3, mac_reverse + 2, 1);
     memcpy(mac_address + 4, mac_reverse + 1, 1);
-    memcpy(mac_address + 5, mac_reverse    , 1);
+    memcpy(mac_address + 5, mac_reverse, 1);
     ESP_LOGVV(TAG, "decrypt_xiaomi_payload(): authenticated decryption failed.");
     ESP_LOGVV(TAG, "  MAC address : %s", hexencode(mac_address, 6).c_str());
     ESP_LOGVV(TAG, "       Packet : %s", hexencode(raw.data(), raw.size()).c_str());
