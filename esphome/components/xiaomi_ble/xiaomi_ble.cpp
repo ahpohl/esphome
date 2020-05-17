@@ -38,10 +38,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   if ((raw[0] == 0x03) && (data_length == 1)) {
     result.has_motion = (data[0]) ? true : false;
   }
-  // motion detection, 4 byte, 32-bit unsigned integer
-  else if ((raw[0] == 0x17) && (data_length == 4)) {
-    result.has_motion = (data[0]) ? false : true;
-  }
   // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
   else if ((raw[0] == 0x04) && (data_length == 2)) {
     const int16_t temperature = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
@@ -52,12 +48,10 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
     result.humidity = humidity / 10.0f;
   }
-  // illuminance (+ motion), 3 bytes, 24-bit unsigned integer (LE), 1 lx
-  else if (((raw[0] == 0x07) || (raw[0] == 0x0F)) && (data_length == 3)) {
+  // illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
+  else if ((raw[0] == 0x07) && (data_length == 3)) {
     const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
     result.illuminance = illuminance;
-    if (raw[0] == 0x0F)
-      result.has_motion = true;
   }
   // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
   else if ((raw[0] == 0x08) && (data_length == 1)) {
@@ -79,6 +73,11 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     result.temperature = temperature / 10.0f;
     result.humidity = humidity / 10.0f;
   }
+  // brightness + motion, 3 bytes, 24-bit unsigned integer (LE)
+  else if ((raw[0] == 0x0F) && (data_length == 3)) {
+    const uint32_t brightness = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+    result.has_motion = true;
+  }
   // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
   else if ((raw[0] == 0x10) && (data_length == 2)) {
     const uint16_t formaldehyde = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
@@ -91,6 +90,11 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   // mosquito tablet, 1 byte, 8-bit unsigned integer, 1 %
   else if ((raw[0] == 0x13) && (data_length == 1)) {
     result.tablet = data[0];
+  }
+  // time since last motion, 4 byte, 32-bit unsigned integer, 1 sec
+  else if ((raw[0] == 0x17) && (data_length == 4)) {
+    const uint32_t timer = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16) | (uint32_t(data[2]) << 24);
+    result.has_motion = false;
   } else {
     return false;
   }
