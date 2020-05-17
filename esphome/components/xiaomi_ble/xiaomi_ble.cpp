@@ -91,10 +91,13 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   else if ((raw[0] == 0x13) && (data_length == 1)) {
     result.tablet = data[0];
   }
-  // time since last motion, 4 byte, 32-bit unsigned integer, 1 sec
+  // idle time since last motion, 4 byte, 32-bit unsigned integer, 1 min
   else if ((raw[0] == 0x17) && (data_length == 4)) {
-    const uint32_t timer = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16) | (uint32_t(data[2]) << 24);
-    result.has_motion = false;
+    const uint32_t idle_time =
+        uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16) | (uint32_t(data[2]) << 24);
+    result.idle_time = idle_time / 60.0f;
+    if (idle_time)
+      result.has_motion = false;
   } else {
     return false;
   }

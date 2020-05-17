@@ -32,6 +32,7 @@ struct XiaomiParseResult {
   optional<float> formaldehyde;
   optional<float> battery_level;
   optional<float> tablet;
+  optional<float> idle_time;
   optional<bool> is_active;
   optional<bool> has_motion;
   bool has_data;        // 0x40
