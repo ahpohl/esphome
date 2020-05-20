@@ -223,6 +223,14 @@ sensor:
       name: "RuuviTag Movement Counter"
     measurement_sequence_number:
       name: "RuuviTag Measurement Sequence Number"
+  - platform: homeassistant
+    entity_id: sensor.hello_world
+    id: ha_hello_world
+  - platform: as3935
+    lightning_energy:
+      name: "Lightning Energy"
+    distance:
+      name: "Distance Storm"
 
 time:
 - platform: homeassistant
@@ -230,10 +238,6 @@ time:
     - at: '16:00:00'
       then:
         - logger.log: It's 16:00
-
-apds9960:
-  address: 0x20
-  update_interval: 60s
 
 esp32_touch:
   setup_mode: True
@@ -255,18 +259,6 @@ binary_sensor:
     name: "ESP32 Touch Pad GPIO27"
     pin: GPIO27
     threshold: 1000
-  - platform: apds9960
-    direction: up
-    name: APDS9960 Up
-  - platform: apds9960
-    direction: down
-    name: APDS9960 Down
-  - platform: apds9960
-    direction: left
-    name: APDS9960 Left
-  - platform: apds9960
-    direction: right
-    name: APDS9960 Right
   - platform: homeassistant
     entity_id: binary_sensor.hello_world
     id: ha_hello_world_binary
@@ -284,7 +276,6 @@ binary_sensor:
     battery_level:
       name: "WX08ZM Battery Level"
   - platform: xiaomi_mjyd02yla
-    device_class: motion
     name: "MJYD02YL-A Night Light"
     mac_address: "50:EC:50:CD:32:02"
     bindkey: "48403ebe2d385db8d0c187f81e62cb64"
@@ -292,6 +283,8 @@ binary_sensor:
       name: "MJYD02YL-A Illuminance"
     battery_level:
       name: "MJYD02YL-A Battery Level"
+    light:
+      name: "MJYD02YL-A Light"
 
 esp32_ble_tracker:
   on_ble_advertise:
@@ -356,6 +349,8 @@ text_sensor:
   - platform: homeassistant
     entity_id: sensor.hello_world2
     id: ha_hello_world2
+  - platform: ble_scanner
+    name: Scanner
 
 script:
   - id: my_script
