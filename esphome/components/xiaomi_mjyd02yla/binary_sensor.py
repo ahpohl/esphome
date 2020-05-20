@@ -2,8 +2,9 @@ import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import sensor, binary_sensor, esp32_ble_tracker
 from esphome.const import CONF_MAC_ADDRESS, CONF_ID, CONF_BINDKEY, \
-    UNIT_PERCENT, ICON_BATTERY, CONF_BATTERY_LEVEL, CONF_ILLUMINANCE, UNIT_LUX, \
-    ICON_BRIGHTNESS_5, UNIT_MINUTE, ICON_TIMELAPSE, CONF_IDLE_TIME
+    CONF_DEVICE_CLASS, CONF_LIGHT, ICON_BRIGHTNESS_5, \
+    CONF_BATTERY_LEVEL, UNIT_PERCENT, ICON_BATTERY, \
+    CONF_IDLE_TIME, UNIT_MINUTE, ICON_TIMELAPSE
 
 DEPENDENCIES = ['esp32_ble_tracker']
 AUTO_LOAD = ['xiaomi_ble']
@@ -16,9 +17,12 @@ CONFIG_SCHEMA = cv.All(binary_sensor.BINARY_SENSOR_SCHEMA.extend({
     cv.GenerateID(): cv.declare_id(XiaomiMJYD02YLA),
     cv.Required(CONF_MAC_ADDRESS): cv.mac_address,
     cv.Required(CONF_BINDKEY): cv.bind_key,
+    cv.Optional(CONF_DEVICE_CLASS, default='motion'): binary_sensor.device_class,
     cv.Optional(CONF_IDLE_TIME): sensor.sensor_schema(UNIT_MINUTE, ICON_TIMELAPSE, 0),
-    cv.Optional(CONF_ILLUMINANCE): sensor.sensor_schema(UNIT_LUX, ICON_BRIGHTNESS_5, 0),
     cv.Optional(CONF_BATTERY_LEVEL): sensor.sensor_schema(UNIT_PERCENT, ICON_BATTERY, 0),
+    cv.Optional(CONF_LIGHT): binary_sensor.BINARY_SENSOR_SCHEMA.extend({
+        cv.Optional(CONF_DEVICE_CLASS, default='light'): binary_sensor.device_class,
+    }),
 }).extend(esp32_ble_tracker.ESP_BLE_DEVICE_SCHEMA).extend(cv.COMPONENT_SCHEMA))
 
 
@@ -34,11 +38,11 @@ def to_code(config):
     if CONF_IDLE_TIME in config:
         sens = yield sensor.new_sensor(config[CONF_IDLE_TIME])
         cg.add(var.set_idle_time(sens))
-    if CONF_ILLUMINANCE in config:
-        sens = yield sensor.new_sensor(config[CONF_ILLUMINANCE])
-        cg.add(var.set_illuminance(sens))
     if CONF_BATTERY_LEVEL in config:
         sens = yield sensor.new_sensor(config[CONF_BATTERY_LEVEL])
         cg.add(var.set_battery_level(sens))
+    if CONF_LIGHT in config:
+        sens = yield binary_sensor.new_binary_sensor(config[CONF_LIGHT])
+        cg.add(var.set_light(sens))
 
     cg.add_library("mbedtls", "cdf462088d")

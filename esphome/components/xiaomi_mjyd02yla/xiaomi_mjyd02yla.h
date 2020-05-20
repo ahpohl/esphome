@@ -23,15 +23,15 @@ class XiaomiMJYD02YLA : public Component,
   void dump_config() override;
   float get_setup_priority() const override { return setup_priority::DATA; }
   void set_idle_time(sensor::Sensor *idle_time) { idle_time_ = idle_time; }
-  void set_illuminance(sensor::Sensor *illuminance) { illuminance_ = illuminance; }
   void set_battery_level(sensor::Sensor *battery_level) { battery_level_ = battery_level; }
+  void set_light(binary_sensor::BinarySensor *light) { light_ = light; }
 
  protected:
   uint64_t address_;
   uint8_t bindkey_[16];
   sensor::Sensor *idle_time_{nullptr};
-  sensor::Sensor *illuminance_{nullptr};
   sensor::Sensor *battery_level_{nullptr};
+  binary_sensor::BinarySensor *light_{nullptr};
 };
 
 }  // namespace xiaomi_mjyd02yla

@@ -36,7 +36,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
 
   // motion detection, 1 byte, 8-bit unsigned integer
   if ((raw[0] == 0x03) && (data_length == 1)) {
-    result.has_motion = (data[0]) ? true : false;
+    result.motion = (data[0]) ? true : false;
   }
   // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
   else if ((raw[0] == 0x04) && (data_length == 2)) {
@@ -73,10 +73,11 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     result.temperature = temperature / 10.0f;
     result.humidity = humidity / 10.0f;
   }
-  // brightness + motion, 3 bytes, 24-bit unsigned integer (LE)
+  // illuminance + motion, 3 bytes, 24-bit unsigned integer (LE)
   else if ((raw[0] == 0x0F) && (data_length == 3)) {
-    const uint32_t brightness = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
-    result.has_motion = true;
+    const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+    result.illuminance = illuminance;
+    result.motion = true;
   }
   // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
   else if ((raw[0] == 0x10) && (data_length == 2)) {
@@ -97,7 +98,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
         uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16) | (uint32_t(data[2]) << 24);
     result.idle_time = idle_time / 60.0f;
     if (idle_time)
-      result.has_motion = false;
+      result.motion = false;
   } else {
     return false;
   }
@@ -167,9 +168,10 @@ optional<XiaomiParseResult> parse_xiaomi_header(const esp32_ble_tracker::Service
     result.type = XiaomiParseResult::TYPE_LYWSD03MMC;
     result.name = "LYWSD03MMC";
   } else if ((raw[2] == 0xf6) && (raw[3] == 0x07)) {  // Xiaomi-Yeelight BLE nightlight
-    result.type = XiaomiParseResult::TYPE_MJYD2S;
-    result.name = "MJYD2S";
-    result.raw_offset -= 6;
+    result.type = XiaomiParseResult::TYPE_MJYD02YLA;
+    result.name = "MJYD02YLA";
+    if (raw.size() == 19)
+      result.raw_offset -= 6;
   } else {
     ESP_LOGVV(TAG, "parse_xiaomi_header(): unknown device, no magic bytes.");
     return {};
@@ -298,8 +300,8 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->is_active.has_value()) {
     ESP_LOGD(TAG, "  Repellent: %s", (*result->is_active) ? "on" : "off");
   }
-  if (result->has_motion.has_value()) {
-    ESP_LOGD(TAG, "  Motion: %s", (*result->has_motion) ? "yes" : "no");
+  if (result->motion.has_value()) {
+    ESP_LOGD(TAG, "  Motion: %s", (*result->motion) ? "yes" : "no");
   }
 
   return true;
