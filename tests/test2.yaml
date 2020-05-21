@@ -279,12 +279,13 @@ binary_sensor:
     name: "MJYD02YL-A Night Light"
     mac_address: "50:EC:50:CD:32:02"
     bindkey: "48403ebe2d385db8d0c187f81e62cb64"
-    illuminance:
-      name: "MJYD02YL-A Illuminance"
+    idle_time:
+      name: "MJYD02YL-A Idle Time"
+    light:
+      name: "MJYD02YL-A Light Status"
     battery_level:
       name: "MJYD02YL-A Battery Level"
-    light:
-      name: "MJYD02YL-A Light"
+
 
 esp32_ble_tracker:
   on_ble_advertise:
