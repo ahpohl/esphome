@@ -47,10 +47,10 @@ bool XiaomiMJYD02YLA::parse_device(const esp32_ble_tracker::ESPBTDevice &device)
       this->idle_time_->publish_state(*res->idle_time);
     if (res->battery_level.has_value() && this->battery_level_ != nullptr)
       this->battery_level_->publish_state(*res->battery_level);
-    if (res->illuminance.has_value() && this->light_ != nullptr)
-      this->light_->publish_state((res->illuminance > 1) ? true : false);
-    if (res->motion.has_value())
-      this->publish_state(*res->motion); // motion event should be transmitted last
+    if (res->is_light.has_value() && this->light_ != nullptr)
+      this->light_->publish_state(*res->is_light);
+    if (res->has_motion.has_value())
+      this->publish_state(*res->has_motion);
     success = true;
   }
 

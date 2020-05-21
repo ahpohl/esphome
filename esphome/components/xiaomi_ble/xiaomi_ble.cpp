@@ -36,7 +36,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
 
   // motion detection, 1 byte, 8-bit unsigned integer
   if ((raw[0] == 0x03) && (data_length == 1)) {
-    result.motion = (data[0]) ? true : false;
+    result.has_motion = (data[0]) ? true : false;
   }
   // temperature, 2 bytes, 16-bit signed integer (LE), 0.1 °C
   else if ((raw[0] == 0x04) && (data_length == 2)) {
@@ -73,11 +73,11 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     result.temperature = temperature / 10.0f;
     result.humidity = humidity / 10.0f;
   }
-  // illuminance + motion, 3 bytes, 24-bit unsigned integer (LE)
+  // brightness + motion, 3 bytes, 24-bit unsigned integer (LE), 1 lx
   else if ((raw[0] == 0x0F) && (data_length == 3)) {
-    const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
-    result.illuminance = illuminance;
-    result.motion = true;
+    const uint32_t brightness = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
+    result.is_light = (brightness == 100) ? true : false;
+    result.has_motion = true;
   }
   // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
   else if ((raw[0] == 0x10) && (data_length == 2)) {
@@ -97,8 +97,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     const uint32_t idle_time =
         uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16) | (uint32_t(data[2]) << 24);
     result.idle_time = idle_time / 60.0f;
-    if (idle_time)
-      result.motion = false;
+    result.has_motion = (idle_time) ? false : true;
   } else {
     return false;
   }
@@ -300,8 +299,11 @@ bool report_xiaomi_results(const optional<XiaomiParseResult> &result, const std:
   if (result->is_active.has_value()) {
     ESP_LOGD(TAG, "  Repellent: %s", (*result->is_active) ? "on" : "off");
   }
-  if (result->motion.has_value()) {
-    ESP_LOGD(TAG, "  Motion: %s", (*result->motion) ? "yes" : "no");
+  if (result->has_motion.has_value()) {
+    ESP_LOGD(TAG, "  Motion: %s", (*result->has_motion) ? "yes" : "no");
+  }
+  if (result->is_light.has_value()) {
+    ESP_LOGD(TAG, "  Light: %s", (*result->is_light) ? "on" : "off");
   }
 
   return true;

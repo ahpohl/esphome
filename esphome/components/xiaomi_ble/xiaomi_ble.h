@@ -34,7 +34,8 @@ struct XiaomiParseResult {
   optional<float> tablet;
   optional<float> idle_time;
   optional<bool> is_active;
-  optional<bool> motion;
+  optional<bool> has_motion;
+  optional<bool> is_light;
   bool has_data;        // 0x40
   bool has_capability;  // 0x20
   bool has_encryption;  // 0x08
