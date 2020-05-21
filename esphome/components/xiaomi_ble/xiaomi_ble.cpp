@@ -52,6 +52,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
   else if ((raw[0] == 0x07) && (data_length == 3)) {
     const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
     result.illuminance = illuminance;
+    result.is_light = (illuminance == 100) ? true : false;
   }
   // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
   else if ((raw[0] == 0x08) && (data_length == 1)) {
