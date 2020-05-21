@@ -178,21 +178,24 @@ sensor:
       name: "CSE7766 Current"
     power:
       name: "CSE776 Power"
-  - platform: apds9960
-    type: proximity
-    name: APDS9960 Proximity
-  - platform: apds9960
-    type: clear
-    name: APDS9960 Clear
-  - platform: apds9960
-    type: red
-    name: APDS9960 Red
-  - platform: apds9960
-    type: green
-    name: APDS9960 Green
-  - platform: apds9960
-    type: blue
-    name: APDS9960 Blue
+#
+# platform sensor.apds9960 requires component apds9960
+#
+#  - platform: apds9960
+#    type: proximity
+#    name: APDS9960 Proximity
+#  - platform: apds9960
+#    type: clear
+#    name: APDS9960 Clear
+#  - platform: apds9960
+#    type: red
+#    name: APDS9960 Red
+#  - platform: apds9960
+#    type: green
+#    name: APDS9960 Green
+#  - platform: apds9960
+#    type: blue
+#    name: APDS9960 Blue
   - platform: homeassistant
     entity_id: sensor.hello_world
     id: ha_hello_world
@@ -223,9 +226,6 @@ sensor:
       name: "RuuviTag Movement Counter"
     measurement_sequence_number:
       name: "RuuviTag Measurement Sequence Number"
-  - platform: homeassistant
-    entity_id: sensor.hello_world
-    id: ha_hello_world
   - platform: as3935
     lightning_energy:
       name: "Lightning Energy"
