@@ -48,11 +48,13 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     const int16_t humidity = uint16_t(data[0]) | (uint16_t(data[1]) << 8);
     result.humidity = humidity / 10.0f;
   }
-  // illuminance, 3 bytes, 24-bit unsigned integer (LE), 1 lx
-  else if ((raw[0] == 0x07) && (data_length == 3)) {
+  // illuminance (+ motion), 3 bytes, 24-bit unsigned integer (LE), 1 lx
+  else if (((raw[0] == 0x07) || (raw[0] == 0x0F)) && (data_length == 3)) {
     const uint32_t illuminance = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
     result.illuminance = illuminance;
     result.is_light = (illuminance == 100) ? true : false;
+    if (raw[0] == 0x0F)
+      result.has_motion = true;
   }
   // soil moisture, 1 byte, 8-bit unsigned integer, 1 %
   else if ((raw[0] == 0x08) && (data_length == 1)) {
@@ -73,12 +75,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     const int16_t humidity = uint16_t(data[2]) | (uint16_t(data[3]) << 8);
     result.temperature = temperature / 10.0f;
     result.humidity = humidity / 10.0f;
-  }
-  // brightness + motion, 3 bytes, 24-bit unsigned integer (LE), 1 lx
-  else if ((raw[0] == 0x0F) && (data_length == 3)) {
-    const uint32_t brightness = uint32_t(data[0]) | (uint32_t(data[1]) << 8) | (uint32_t(data[2]) << 16);
-    result.is_light = (brightness == 100) ? true : false;
-    result.has_motion = true;
   }
   // formaldehyde, 2 bytes, 16-bit unsigned integer (LE), 0.01 mg / m3
   else if ((raw[0] == 0x10) && (data_length == 2)) {
