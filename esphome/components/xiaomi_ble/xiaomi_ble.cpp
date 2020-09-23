@@ -116,7 +116,6 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     }
     const uint8_t value_type = payload[payload_offset];
     const uint8_t *data = &payload[payload_offset + 3];
-    ESP_LOGVV(TAG, "parse_xiaomi_message(): data %s", hexencode(data, value_length).c_str());
     if (!parse_xiaomi_value(value_type, data, value_length, result)) {
       success = true;
     }
