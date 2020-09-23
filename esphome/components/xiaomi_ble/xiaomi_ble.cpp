@@ -116,7 +116,7 @@ bool parse_xiaomi_message(const std::vector<uint8_t> &message, XiaomiParseResult
     }
     const uint8_t value_type = payload[payload_offset];
     const uint8_t *data = &payload[payload_offset + 3];
-    if (!parse_xiaomi_value(value_type, data, value_length, result)) {
+    if (parse_xiaomi_value(value_type, data, value_length, result)) {
       success = true;
     }
     payload_length -= (3 + value_length);
