@@ -238,9 +238,16 @@ LightColorValues LightCall::validate_() {
   }
 
   // Set color brightness to 100% if currently zero and a color is set.
+  // Turn off if color equals zero, otherwise turn on
   if (this->red_.has_value() || this->green_.has_value() || this->blue_.has_value()) {
-    if (!this->color_brightness_.has_value() && this->parent_->remote_values.get_color_brightness() == 0.0f)
+    if (!this->color_brightness_.has_value() && this->parent_->remote_values.get_color_brightness() == 0.0f) {
       this->color_brightness_ = optional<float>(1.0f);
+    }
+    if ((*this->red_ == 0.0f) && (*this->green_ == 0.0f) && (*this->blue_ == 0.0f)) {
+      this->state_ = optional<float>(false);
+    } else {
+      this->state_ = optional<float>(true); 
+    }
   }
 
   // Create color values for the light with this call applied.
