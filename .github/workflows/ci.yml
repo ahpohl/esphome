@@ -35,7 +35,7 @@ jobs:
       cache-key: ${{ steps.cache-key.outputs.key }}
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Generate cache-key
         id: cache-key
         run: echo key="${{ hashFiles('requirements.txt', 'requirements_optional.txt', 'requirements_test.txt') }}" >> $GITHUB_OUTPUT
@@ -67,7 +67,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -88,7 +88,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -109,7 +109,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -130,7 +130,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -151,7 +151,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -200,7 +200,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -230,7 +230,7 @@ jobs:
       - common
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -293,7 +293,7 @@ jobs:
 
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -352,7 +352,7 @@ jobs:
       count: ${{ steps.list-components.outputs.count }}
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
         with:
           # Fetch enough history so `git merge-base refs/remotes/origin/dev HEAD` works.
           fetch-depth: 500
@@ -400,7 +400,7 @@ jobs:
         run: sudo apt-get install libsdl2-dev
 
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
@@ -426,7 +426,7 @@ jobs:
       matrix: ${{ steps.split.outputs.components }}
     steps:
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Split components into 20 groups
         id: split
         run: |
@@ -454,7 +454,7 @@ jobs:
         run: sudo apt-get install libsdl2-dev
 
       - name: Check out code from GitHub
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v4.2.2
       - name: Restore Python
         uses: ./.github/actions/restore-python
         with:
