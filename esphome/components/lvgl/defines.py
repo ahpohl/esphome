@@ -4,16 +4,29 @@ Constants already defined in esphome.const are not duplicated here and must be i
 
 """
 
+import logging
+
 from esphome import codegen as cg, config_validation as cv
 from esphome.const import CONF_ITEMS
 from esphome.core import ID, Lambda
-from esphome.cpp_generator import MockObj
+from esphome.cpp_generator import LambdaExpression, MockObj
 from esphome.cpp_types import uint32
 from esphome.schema_extractors import SCHEMA_EXTRACT, schema_extractor
 
 from .helpers import requires_component
 
+LOGGER = logging.getLogger(__name__)
 lvgl_ns = cg.esphome_ns.namespace("lvgl")
+
+lv_defines = {}  # Dict of #defines to provide as build flags
+
+
+def add_define(macro, value="1"):
+    if macro in lv_defines and lv_defines[macro] != value:
+        LOGGER.error(
+            "Redefinition of %s - was %s now %s", macro, lv_defines[macro], value
+        )
+    lv_defines[macro] = value
 
 
 def literal(arg):
@@ -22,19 +35,22 @@ def literal(arg):
     return arg
 
 
+def call_lambda(lamb: LambdaExpression):
+    expr = lamb.content.strip()
+    if expr.startswith("return") and expr.endswith(";"):
+        return expr[6:][:-1].strip()
+    return f"{lamb}()"
+
+
 class LValidator:
     """
     A validator for a particular type used in LVGL. Usable in configs as a validator, also
     has `process()` to convert a value during code generation
     """
 
-    def __init__(
-        self, validator, rtype, idtype=None, idexpr=None, retmapper=None, requires=None
-    ):
+    def __init__(self, validator, rtype, retmapper=None, requires=None):
         self.validator = validator
         self.rtype = rtype
-        self.idtype = idtype
-        self.idexpr = idexpr
         self.retmapper = retmapper
         self.requires = requires
 
@@ -43,8 +59,6 @@ class LValidator:
             value = requires_component(self.requires)(value)
         if isinstance(value, cv.Lambda):
             return cv.returning_lambda(value)
-        if self.idtype is not None and isinstance(value, ID):
-            return cv.use_id(self.idtype)(value)
         return self.validator(value)
 
     async def process(self, value, args=()):
@@ -52,12 +66,18 @@ class LValidator:
             return None
         if isinstance(value, Lambda):
             return cg.RawExpression(
-                f"{await cg.process_lambda(value, args, return_type=self.rtype)}()"
+                call_lambda(
+                    await cg.process_lambda(value, args, return_type=self.rtype)
+                )
             )
-        if self.idtype is not None and isinstance(value, ID):
-            return cg.RawExpression(f"{value}->{self.idexpr}")
         if self.retmapper is not None:
             return self.retmapper(value)
+        if isinstance(value, ID):
+            return await cg.get_variable(value)
+        if isinstance(value, list):
+            value = [
+                await cg.get_variable(x) if isinstance(x, ID) else x for x in value
+            ]
         return cg.safe_exp(value)
 
 
@@ -89,7 +109,7 @@ class LvConstant(LValidator):
             cv.ensure_list(self.one_of), uint32, retmapper=self.mapper
         )
 
-    def mapper(self, value, args=()):
+    def mapper(self, value):
         if not isinstance(value, list):
             value = [value]
         return literal(
@@ -103,7 +123,7 @@ class LvConstant(LValidator):
 
     def extend(self, *choices):
         """
-        Extend an LVCconstant with additional choices.
+        Extend an LVconstant with additional choices.
         :param choices: The extra choices
         :return: A new LVConstant instance
         """
@@ -126,6 +146,8 @@ TYPE_FLEX = "flex"
 TYPE_GRID = "grid"
 TYPE_NONE = "none"
 
+DIRECTIONS = LvConstant("LV_DIR_", "LEFT", "RIGHT", "BOTTOM", "TOP")
+
 LV_FONTS = list(f"montserrat_{s}" for s in range(8, 50, 2)) + [
     "dejavu_16_persian_hebrew",
     "simsun_16_cjk",
@@ -147,9 +169,15 @@ LV_EVENT_MAP = {
     "DEFOCUS": "DEFOCUSED",
     "READY": "READY",
     "CANCEL": "CANCEL",
+    "ALL_EVENTS": "ALL",
+    "CHANGE": "VALUE_CHANGED",
+    "GESTURE": "GESTURE",
 }
 
 LV_EVENT_TRIGGERS = tuple(f"on_{x.lower()}" for x in LV_EVENT_MAP)
+SWIPE_TRIGGERS = tuple(
+    f"on_swipe_{x.lower()}" for x in DIRECTIONS.choices + ("up", "down")
+)
 
 
 LV_ANIM = LvConstant(
@@ -171,14 +199,17 @@ LV_ANIM = LvConstant(
     "OUT_BOTTOM",
 )
 
-LOG_LEVELS = (
-    "TRACE",
-    "INFO",
-    "WARN",
-    "ERROR",
-    "USER",
-    "NONE",
-)
+LV_GRAD_DIR = LvConstant("LV_GRAD_DIR_", "NONE", "HOR", "VER")
+LV_DITHER = LvConstant("LV_DITHER_", "NONE", "ORDERED", "ERR_DIFF")
+
+LV_LOG_LEVELS = {
+    "VERBOSE": "TRACE",
+    "DEBUG": "TRACE",
+    "INFO": "INFO",
+    "WARN": "WARN",
+    "ERROR": "ERROR",
+    "NONE": "NONE",
+}
 
 LV_LONG_MODES = LvConstant(
     "LV_LABEL_LONG_",
@@ -190,7 +221,7 @@ LV_LONG_MODES = LvConstant(
 )
 
 STATES = (
-    "default",
+    # default state not included here
     "checked",
     "focused",
     "focus_key",
@@ -225,7 +256,6 @@ KEYBOARD_MODES = LvConstant(
     "NUMBER",
 )
 ROLLER_MODES = LvConstant("LV_ROLLER_MODE_", "NORMAL", "INFINITE")
-DIRECTIONS = LvConstant("LV_DIR_", "LEFT", "RIGHT", "BOTTOM", "TOP")
 TILE_DIRECTIONS = DIRECTIONS.extend("HOR", "VER", "ALL")
 CHILD_ALIGNMENTS = LvConstant(
     "LV_ALIGN_",
@@ -372,11 +402,13 @@ CONF_ANTIALIAS = "antialias"
 CONF_ARC_LENGTH = "arc_length"
 CONF_AUTO_START = "auto_start"
 CONF_BACKGROUND_STYLE = "background_style"
+CONF_BUTTON_STYLE = "button_style"
 CONF_DECIMAL_PLACES = "decimal_places"
 CONF_COLUMN = "column"
 CONF_DIGITS = "digits"
 CONF_DISP_BG_COLOR = "disp_bg_color"
 CONF_DISP_BG_IMAGE = "disp_bg_image"
+CONF_DISP_BG_OPA = "disp_bg_opa"
 CONF_BODY = "body"
 CONF_BUTTONS = "buttons"
 CONF_BYTE_ORDER = "byte_order"
@@ -384,11 +416,12 @@ CONF_CHANGE_RATE = "change_rate"
 CONF_CLOSE_BUTTON = "close_button"
 CONF_COLOR_DEPTH = "color_depth"
 CONF_CONTROL = "control"
-CONF_DEFAULT = "default"
 CONF_DEFAULT_FONT = "default_font"
 CONF_DEFAULT_GROUP = "default_group"
 CONF_DIR = "dir"
 CONF_DISPLAYS = "displays"
+CONF_DRAW_ROUNDING = "draw_rounding"
+CONF_EDITING = "editing"
 CONF_ENCODERS = "encoders"
 CONF_END_ANGLE = "end_angle"
 CONF_END_VALUE = "end_value"
@@ -400,7 +433,9 @@ CONF_FLEX_ALIGN_MAIN = "flex_align_main"
 CONF_FLEX_ALIGN_CROSS = "flex_align_cross"
 CONF_FLEX_ALIGN_TRACK = "flex_align_track"
 CONF_FLEX_GROW = "flex_grow"
+CONF_FREEZE = "freeze"
 CONF_FULL_REFRESH = "full_refresh"
+CONF_GRADIENTS = "gradients"
 CONF_GRID_CELL_ROW_POS = "grid_cell_row_pos"
 CONF_GRID_CELL_COLUMN_POS = "grid_cell_column_pos"
 CONF_GRID_CELL_ROW_SPAN = "grid_cell_row_span"
@@ -415,6 +450,7 @@ CONF_HEADER_MODE = "header_mode"
 CONF_HOME = "home"
 CONF_INITIAL_FOCUS = "initial_focus"
 CONF_KEY_CODE = "key_code"
+CONF_KEYPADS = "keypads"
 CONF_LAYOUT = "layout"
 CONF_LEFT_BUTTON = "left_button"
 CONF_LINE_WIDTH = "line_width"
@@ -425,12 +461,15 @@ CONF_LVGL_ID = "lvgl_id"
 CONF_LONG_MODE = "long_mode"
 CONF_MSGBOXES = "msgboxes"
 CONF_OBJ = "obj"
-CONF_OFFSET_X = "offset_x"
-CONF_OFFSET_Y = "offset_y"
-CONF_ONE_LINE = "one_line"
-CONF_ON_SELECT = "on_select"
 CONF_ONE_CHECKED = "one_checked"
+CONF_ONE_LINE = "one_line"
+CONF_ON_PAUSE = "on_pause"
+CONF_ON_RESUME = "on_resume"
+CONF_ON_SELECT = "on_select"
+CONF_OPA = "opa"
 CONF_NEXT = "next"
+CONF_PAD_ROW = "pad_row"
+CONF_PAD_COLUMN = "pad_column"
 CONF_PAGE = "page"
 CONF_PAGE_WRAP = "page_wrap"
 CONF_PASSWORD_MODE = "password_mode"
@@ -441,6 +480,7 @@ CONF_POINTS = "points"
 CONF_PREVIOUS = "previous"
 CONF_REPEAT_COUNT = "repeat_count"
 CONF_RECOLOR = "recolor"
+CONF_RESUME_ON_INPUT = "resume_on_input"
 CONF_RIGHT_BUTTON = "right_button"
 CONF_ROLLOVER = "rollover"
 CONF_ROOT_BACK_BTN = "root_back_btn"
@@ -448,6 +488,7 @@ CONF_ROWS = "rows"
 CONF_SCALE_LINES = "scale_lines"
 CONF_SCROLLBAR_MODE = "scrollbar_mode"
 CONF_SELECTED_INDEX = "selected_index"
+CONF_SELECTED_TEXT = "selected_text"
 CONF_SHOW_SNOW = "show_snow"
 CONF_SPIN_TIME = "spin_time"
 CONF_SRC = "src"
@@ -462,6 +503,7 @@ CONF_SKIP = "skip"
 CONF_SYMBOL = "symbol"
 CONF_TAB_ID = "tab_id"
 CONF_TABS = "tabs"
+CONF_TIME_FORMAT = "time_format"
 CONF_TILE = "tile"
 CONF_TILE_ID = "tile_id"
 CONF_TILES = "tiles"
@@ -501,4 +543,10 @@ DEFAULT_ESPHOME_FONT = "esphome_lv_default_font"
 
 
 def join_enums(enums, prefix=""):
-    return literal("|".join(f"(int){prefix}{e.upper()}" for e in enums))
+    enums = list(enums)
+    enums.sort()
+    # If a prefix is provided, prepend each constant with the prefix, and assume that all the constants are within the
+    # same namespace, otherwise cast to int to avoid triggering warnings about mixing enum types.
+    if prefix:
+        return literal("|".join(f"{prefix}{e.upper()}" for e in enums))
+    return literal("|".join(f"(int){e.upper()}" for e in enums))

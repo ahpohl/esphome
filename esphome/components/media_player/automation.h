@@ -10,7 +10,10 @@ namespace media_player {
 template<MediaPlayerCommand Command, typename... Ts>
 class MediaPlayerCommandAction : public Action<Ts...>, public Parented<MediaPlayer> {
  public:
-  void play(Ts... x) override { this->parent_->make_call().set_command(Command).perform(); }
+  TEMPLATABLE_VALUE(bool, announcement);
+  void play(Ts... x) override {
+    this->parent_->make_call().set_command(Command).set_announcement(this->announcement_.value(x...)).perform();
+  }
 };
 
 template<typename... Ts>
@@ -28,7 +31,13 @@ using VolumeDownAction = MediaPlayerCommandAction<MediaPlayerCommand::MEDIA_PLAY
 
 template<typename... Ts> class PlayMediaAction : public Action<Ts...>, public Parented<MediaPlayer> {
   TEMPLATABLE_VALUE(std::string, media_url)
-  void play(Ts... x) override { this->parent_->make_call().set_media_url(this->media_url_.value(x...)).perform(); }
+  TEMPLATABLE_VALUE(bool, announcement)
+  void play(Ts... x) override {
+    this->parent_->make_call()
+        .set_media_url(this->media_url_.value(x...))
+        .set_announcement(this->announcement_.value(x...))
+        .perform();
+  }
 };
 
 template<typename... Ts> class VolumeSetAction : public Action<Ts...>, public Parented<MediaPlayer> {
@@ -66,6 +75,16 @@ template<typename... Ts> class IsIdleCondition : public Condition<Ts...>, public
 template<typename... Ts> class IsPlayingCondition : public Condition<Ts...>, public Parented<MediaPlayer> {
  public:
   bool check(Ts... x) override { return this->parent_->state == MediaPlayerState::MEDIA_PLAYER_STATE_PLAYING; }
+};
+
+template<typename... Ts> class IsPausedCondition : public Condition<Ts...>, public Parented<MediaPlayer> {
+ public:
+  bool check(Ts... x) override { return this->parent_->state == MediaPlayerState::MEDIA_PLAYER_STATE_PAUSED; }
+};
+
+template<typename... Ts> class IsAnnouncingCondition : public Condition<Ts...>, public Parented<MediaPlayer> {
+ public:
+  bool check(Ts... x) override { return this->parent_->state == MediaPlayerState::MEDIA_PLAYER_STATE_ANNOUNCING; }
 };
 
 }  // namespace media_player

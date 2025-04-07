@@ -1,4 +1,5 @@
 #include "api_server.h"
+#ifdef USE_API
 #include <cerrno>
 #include "api_connection.h"
 #include "esphome/components/network/util.h"
@@ -71,7 +72,7 @@ void APIServer::setup() {
     logger::global_logger->add_on_log_callback([this](int level, const char *tag, const char *message) {
       for (auto &c : this->clients_) {
         if (!c->remove_)
-          c->send_log_message(level, tag, message);
+          c->try_send_log_message(level, tag, message);
       }
     });
   }
@@ -85,7 +86,7 @@ void APIServer::setup() {
         [this](const std::shared_ptr<esp32_camera::CameraImage> &image) {
           for (auto &c : this->clients_) {
             if (!c->remove_)
-              c->send_camera_state(image);
+              c->set_camera_state(image);
           }
         });
   }
@@ -403,3 +404,4 @@ void APIServer::on_alarm_control_panel_update(alarm_control_panel::AlarmControlP
 
 }  // namespace api
 }  // namespace esphome
+#endif
