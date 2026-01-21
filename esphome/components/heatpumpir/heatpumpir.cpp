@@ -1,6 +1,6 @@
 #include "heatpumpir.h"
 
-#ifdef USE_ARDUINO
+#if defined(USE_ARDUINO) || defined(USE_ESP32)
 
 #include <map>
 #include "ir_sender_esphome.h"
@@ -65,6 +65,7 @@ const std::map<Protocol, std::function<HeatpumpIR *()>> PROTOCOL_CONSTRUCTOR_MAP
     {PROTOCOL_AIRWAY, []() { return new AIRWAYHeatpumpIR(); }},                              // NOLINT
     {PROTOCOL_BGH_AUD, []() { return new BGHHeatpumpIR(); }},                                // NOLINT
     {PROTOCOL_PANASONIC_ALTDKE, []() { return new PanasonicAltDKEHeatpumpIR(); }},           // NOLINT
+    {PROTOCOL_PHILCO_PHS32, []() { return new PhilcoPHS32HeatpumpIR(); }},                   // NOLINT
     {PROTOCOL_VAILLANTVAI8, []() { return new VaillantHeatpumpIR(); }},                      // NOLINT
     {PROTOCOL_R51M, []() { return new R51MHeatpumpIR(); }},                                  // NOLINT
 };
@@ -180,6 +181,11 @@ void HeatpumpIRClimate::transmit_state() {
       power_mode_cmd = POWER_ON;
       operating_mode_cmd = MODE_HEAT;
       break;
+    // Map HEAT_COOL to hardware AUTO mode (automatic heat/cool changeover based on temperature).
+    // In hardware AUTO mode, the device automatically switches between heating and cooling
+    // based on the current temperature versus the target temperature.
+    // See https://github.com/esphome/esphome/issues/11161 for further discussion.
+    case climate::CLIMATE_MODE_HEAT_COOL:
     case climate::CLIMATE_MODE_AUTO:
       power_mode_cmd = POWER_ON;
       operating_mode_cmd = MODE_AUTO;

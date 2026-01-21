@@ -1,17 +1,21 @@
 #pragma once
 
-#ifdef USE_ESP_IDF
+#ifdef USE_ESP32
 
 #include "audio_pipeline.h"
 
 #include "esphome/components/audio/audio.h"
-
 #include "esphome/components/media_player/media_player.h"
 #include "esphome/components/speaker/speaker.h"
 
 #include "esphome/core/automation.h"
 #include "esphome/core/component.h"
+#include "esphome/core/defines.h"
 #include "esphome/core/preferences.h"
+
+#ifdef USE_OTA_STATE_LISTENER
+#include "esphome/components/ota/ota_backend.h"
+#endif
 
 #include <deque>
 #include <freertos/FreeRTOS.h>
@@ -39,11 +43,21 @@ struct VolumeRestoreState {
   bool is_muted;
 };
 
-class SpeakerMediaPlayer : public Component, public media_player::MediaPlayer {
+class SpeakerMediaPlayer : public Component,
+                           public media_player::MediaPlayer
+#ifdef USE_OTA_STATE_LISTENER
+    ,
+                           public ota::OTAGlobalStateListener
+#endif
+{
  public:
   float get_setup_priority() const override { return esphome::setup_priority::PROCESSOR; }
   void setup() override;
   void loop() override;
+
+#ifdef USE_OTA_STATE_LISTENER
+  void on_ota_global_state(ota::OTAState state, float progress, uint8_t error, ota::OTAComponent *comp) override;
+#endif
 
   // MediaPlayer implementations
   media_player::MediaPlayerTraits get_traits() override;
@@ -54,6 +68,9 @@ class SpeakerMediaPlayer : public Component, public media_player::MediaPlayer {
 
   // Percentage to increase or decrease the volume for volume up or volume down commands
   void set_volume_increment(float volume_increment) { this->volume_increment_ = volume_increment; }
+
+  // Volume used initially on first boot when no volume had been previously saved
+  void set_volume_initial(float volume_initial) { this->volume_initial_ = volume_initial; }
 
   void set_volume_max(float volume_max) { this->volume_max_ = volume_max; }
   void set_volume_min(float volume_min) { this->volume_min_ = volume_min; }
@@ -72,10 +89,6 @@ class SpeakerMediaPlayer : public Component, public media_player::MediaPlayer {
   Trigger<float> *get_volume_trigger() const { return this->volume_trigger_; }
 
   void play_file(audio::AudioFile *media_file, bool announcement, bool enqueue);
-
-  uint32_t get_playback_ms() const { return this->playback_ms_; }
-  uint32_t get_playback_us() const { return this->playback_us_; }
-  uint32_t get_decoded_playback_ms() const { return this->decoded_playback_ms_; }
 
   void set_playlist_delay_ms(AudioPipelineType pipeline_type, uint32_t delay_ms);
 
@@ -132,6 +145,9 @@ class SpeakerMediaPlayer : public Component, public media_player::MediaPlayer {
   // The amount to change the volume on volume up/down commands
   float volume_increment_;
 
+  // The initial volume used by Setup when no previous volume was saved
+  float volume_initial_;
+
   float volume_max_;
   float volume_min_;
 
@@ -141,13 +157,6 @@ class SpeakerMediaPlayer : public Component, public media_player::MediaPlayer {
   Trigger<> *mute_trigger_ = new Trigger<>();
   Trigger<> *unmute_trigger_ = new Trigger<>();
   Trigger<float> *volume_trigger_ = new Trigger<float>();
-
-  uint32_t decoded_playback_ms_{0};
-  uint32_t playback_us_{0};
-  uint32_t playback_ms_{0};
-  uint32_t remainder_us_{0};
-  uint32_t pending_ms_{0};
-  uint32_t last_audio_write_timestamp_{0};
 };
 
 }  // namespace speaker

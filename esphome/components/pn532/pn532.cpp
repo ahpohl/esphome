@@ -15,11 +15,9 @@ namespace pn532 {
 static const char *const TAG = "pn532";
 
 void PN532::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up PN532...");
-
   // Get version data
   if (!this->write_command_({PN532_COMMAND_VERSION_DATA})) {
-    ESP_LOGW(TAG, "Error sending version command, trying again...");
+    ESP_LOGW(TAG, "Error sending version command, trying again");
     if (!this->write_command_({PN532_COMMAND_VERSION_DATA})) {
       ESP_LOGE(TAG, "Error sending version command");
       this->mark_failed();
@@ -33,8 +31,10 @@ void PN532::setup() {
     this->mark_failed();
     return;
   }
-  ESP_LOGD(TAG, "Found chip PN5%02X", version_data[0]);
-  ESP_LOGD(TAG, "Firmware ver. %d.%d", version_data[1], version_data[2]);
+  ESP_LOGD(TAG,
+           "Found chip PN5%02X\n"
+           "Firmware ver. %d.%d",
+           version_data[0], version_data[1], version_data[2]);
 
   if (!this->write_command_({
           PN532_COMMAND_SAMCONFIGURATION,
@@ -197,7 +197,8 @@ void PN532::loop() {
       trigger->process(tag);
 
     if (report) {
-      ESP_LOGD(TAG, "Found new tag '%s'", nfc::format_uid(nfcid).c_str());
+      char uid_buf[nfc::FORMAT_UID_BUFFER_SIZE];
+      ESP_LOGD(TAG, "Found new tag '%s'", nfc::format_uid_to(uid_buf, nfcid));
       if (tag->has_ndef_message()) {
         const auto &message = tag->get_ndef_message();
         const auto &records = message->get_records();
@@ -208,21 +209,21 @@ void PN532::loop() {
       }
     }
   } else if (next_task_ == CLEAN) {
-    ESP_LOGD(TAG, "  Tag cleaning...");
+    ESP_LOGD(TAG, "  Tag cleaning");
     if (!this->clean_tag_(nfcid)) {
       ESP_LOGE(TAG, "  Tag was not fully cleaned successfully");
     }
     ESP_LOGD(TAG, "  Tag cleaned!");
   } else if (next_task_ == FORMAT) {
-    ESP_LOGD(TAG, "  Tag formatting...");
+    ESP_LOGD(TAG, "  Tag formatting");
     if (!this->format_tag_(nfcid)) {
       ESP_LOGE(TAG, "Error formatting tag as NDEF");
     }
     ESP_LOGD(TAG, "  Tag formatted!");
   } else if (next_task_ == WRITE) {
     if (this->next_task_message_to_write_ != nullptr) {
-      ESP_LOGD(TAG, "  Tag writing...");
-      ESP_LOGD(TAG, "  Tag formatting...");
+      ESP_LOGD(TAG, "  Tag writing");
+      ESP_LOGD(TAG, "  Tag formatting");
       if (!this->format_tag_(nfcid)) {
         ESP_LOGE(TAG, "  Tag could not be formatted for writing");
       } else {
@@ -281,7 +282,7 @@ bool PN532::write_command_(const std::vector<uint8_t> &data) {
 }
 
 bool PN532::read_ack_() {
-  ESP_LOGV(TAG, "Reading ACK...");
+  ESP_LOGV(TAG, "Reading ACK");
 
   std::vector<uint8_t> data;
   if (!this->read_data(data, 6)) {
