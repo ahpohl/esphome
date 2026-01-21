@@ -1,7 +1,7 @@
 cryptography==45.0.1
 voluptuous==0.16.0
 PyYAML==6.0.3
-paho-mqtt==1.6.1
+paho-mqtt==2.1.0
 colorama==0.4.6
 icmplib==3.0.4
 tornado==6.5.4
