@@ -21,8 +21,7 @@
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
-namespace esphome {
-namespace speaker {
+namespace esphome::speaker {
 
 struct MediaCallCommand {
   optional<media_player::MediaPlayerCommand> command;
@@ -43,11 +42,11 @@ struct VolumeRestoreState {
   bool is_muted;
 };
 
-class SpeakerMediaPlayer : public Component,
-                           public media_player::MediaPlayer
+class SpeakerMediaPlayer final : public Component,
+                                 public media_player::MediaPlayer
 #ifdef USE_OTA_STATE_LISTENER
     ,
-                           public ota::OTAGlobalStateListener
+                                 public ota::OTAGlobalStateListener
 #endif
 {
  public:
@@ -126,11 +125,15 @@ class SpeakerMediaPlayer : public Component,
   optional<media_player::MediaPlayerSupportedFormat> media_format_;
   AudioPipelineState media_pipeline_state_{AudioPipelineState::STOPPED};
   bool media_repeat_one_{false};
+  // Set when the media pipeline reports an error, consumed when it stops, so the failed item is dropped
+  bool media_item_failed_{false};
   uint32_t media_playlist_delay_ms_{0};
 
   optional<media_player::MediaPlayerSupportedFormat> announcement_format_;
   AudioPipelineState announcement_pipeline_state_{AudioPipelineState::STOPPED};
   bool announcement_repeat_one_{false};
+  // Set when the announcement pipeline reports an error, consumed when it stops, so the failed item is dropped
+  bool announcement_item_failed_{false};
   uint32_t announcement_playlist_delay_ms_{0};
 
   QueueHandle_t media_control_command_queue_;
@@ -144,6 +147,9 @@ class SpeakerMediaPlayer : public Component,
 
   bool is_paused_{false};
   bool is_muted_{false};
+#ifdef USE_SPEAKER_MEDIA_PLAYER_ON_OFF
+  bool is_turn_off_{false};
+#endif
   uint8_t unpause_media_remaining_{0};
   uint8_t unpause_announcement_remaining_{0};
 
@@ -164,7 +170,6 @@ class SpeakerMediaPlayer : public Component,
   Trigger<float> volume_trigger_;
 };
 
-}  // namespace speaker
-}  // namespace esphome
+}  // namespace esphome::speaker
 
 #endif
